@@ -8,7 +8,6 @@ export default function Earth() {
   const texture = useLoader(TextureLoader, earthTexture);
   const mesh = useRef();
 
-  // rotación suave automática
   useFrame((_, delta) => {
     if (mesh.current) mesh.current.rotation.y += 0.08 * delta;
   });
