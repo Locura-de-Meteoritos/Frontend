@@ -24,7 +24,7 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
     traveled.current += move
     if (traveled.current >= distance.current) {
       if (debug) console.log('[Asteroid] impact at', target.toArray())
-      if (onHit) onHit(target)
+      if (onHit) onHit(target, { masa, tipo, densidad, angulo, speed })
       mesh.current.visible = false
       return
     }

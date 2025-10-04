@@ -18,6 +18,7 @@ const Simulacion = () => {
 
   const [showHelpers, setShowHelpers] = useState(false);
   const [freezeRotation, setFreezeRotation] = useState(false);
+  const [craters, setCraters] = useState([]);
   const [asteroids, setAsteroids] = useState([]);
   const [awaitingTarget, setAwaitingTarget] = useState(false);
   const earthRef = useRef();
@@ -57,11 +58,20 @@ const Simulacion = () => {
     setAwaitingTarget(false);
   }, [awaitingTarget, params.velocidad]);
 
-  const handleAsteroidHit = (target) => {
-    console.log('Impact at', target);
+  const handleAsteroidHit = (target, data) => {
+    console.log('Impact at', target, data);
+    // Crear cráter: escalado simple basado en masa y velocidad
+    const masa = data?.masa || 1000;
+    const vel = data?.speed || 1;
+    // Radio base: masa^(1/6) * factor velocidad
+    const radius = Math.min(0.9, Math.max(0.12, Math.cbrt(Math.sqrt(masa)) * 0.02 * (0.6 + vel)));
+  // Alternar color para diferenciarlos (rojo / amarillo)
+  const colorScheme = Math.random() < 0.5 ? 'rojo' : 'amarillo';
+  const crater = { id: Date.now(), position: target.clone(), radius, depth: radius * 0.25, colorScheme };
+    setCraters(c => [...c, crater]);
     setAsteroids([]);
     setFreezeRotation(true); // detener rotación de la Tierra
-    // TODO: add visual explosion or effect
+    // TODO futuro: animación de explosión temporal
   };
 
   return (
@@ -123,7 +133,7 @@ const Simulacion = () => {
 
       <div style={{ position: "absolute", inset: 0, zIndex: 10 }}>
         <Canvas camera={{ position: [0, 1.2, 6], fov: 60 }}>
-          <Earth earthRef={earthRef} onPointerDown={handleEarthPointerDown} paused={freezeRotation} />
+          <Earth earthRef={earthRef} onPointerDown={handleEarthPointerDown} paused={freezeRotation} craters={craters} />
 
           {asteroids.map(a => (
             <Asteroid
@@ -141,15 +151,14 @@ const Simulacion = () => {
           ))}
         </Canvas>
       </div>
-
       {freezeRotation && (
-        <div style={{ position: 'absolute', top: 110, right: 20, zIndex: 45 }}>
+        <div style={{ position: 'absolute', top: 110, right: 20, zIndex: 40 }}>
           <button
             onClick={() => setFreezeRotation(false)}
             style={{
               padding: '8px 14px',
-              background: '#2563eb',
-              color: '#fff',
+              background: 'white',
+              color: '#000',
               borderRadius: 8,
               boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
               fontWeight: 500,
@@ -161,10 +170,6 @@ const Simulacion = () => {
           </button>
         </div>
       )}
-
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'auto', backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(6px)' }}>
-        <Footer />
-      </div>
     </div>
   );
 };
