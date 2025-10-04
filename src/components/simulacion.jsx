@@ -5,7 +5,13 @@ import Header from "./Header";
 import Footer from "./Footer";
 import { useState, useRef, useCallback, useEffect } from "react";
 import Asteroid from "./Asteroid";
+import ImpactConsequences from "./ImpactConsequences";
 import * as THREE from 'three';
+import { 
+  HISTORICAL_EVENTS, 
+  calculateFullImpact,
+  compareWithHistory 
+} from '../utils/impactCalculations';
 
 const Simulacion = () => {
   const [params, setParams] = useState({
@@ -20,6 +26,7 @@ const Simulacion = () => {
   const [freezeRotation, setFreezeRotation] = useState(false);
   const [craters, setCraters] = useState([]);
   const [lastImpact, setLastImpact] = useState(null);
+  const [fullImpactAnalysis, setFullImpactAnalysis] = useState(null); // Análisis completo NASA
   const [asteroids, setAsteroids] = useState([]);
   const [awaitingTarget, setAwaitingTarget] = useState(false);
   const earthRef = useRef();
@@ -27,6 +34,7 @@ const Simulacion = () => {
   const [neos, setNeos] = useState([]);
   const [neosLoading, setNeosLoading] = useState(false);
   const [neosError, setNeosError] = useState(null);
+  const [neoFilter, setNeoFilter] = useState('all'); // 'all', 'hazardous', 'historical'
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -155,6 +163,63 @@ const Simulacion = () => {
     return () => { mounted = false };
   }, []);
 
+  // Funciones para filtrar y cargar diferentes tipos de datos
+  const loadHistoricalEvents = useCallback(() => {
+    setNeoFilter('historical');
+    // Convertir eventos históricos al formato NEO
+    const historicalAsNeos = HISTORICAL_EVENTS.map((event, idx) => ({
+      id: `hist-${idx}`,
+      name: event.name,
+      estimated_diameter: {
+        meters: {
+          estimated_diameter_max: event.diameter,
+          estimated_diameter_min: event.diameter * 0.8
+        }
+      },
+      close_approach_data: [{
+        relative_velocity: {
+          kilometers_per_second: event.velocity.toString(),
+          kilometers_per_hour: (event.velocity * 3600).toString()
+        },
+        miss_distance: {
+          kilometers: "0"
+        },
+        close_approach_date: "Histórico"
+      }],
+      is_potentially_hazardous_asteroid: true,
+      _isHistorical: true,
+      _casualties: event.casualties,
+      _location: event.location
+    }));
+    setNeos(historicalAsNeos);
+  }, []);
+
+  const filterHazardous = useCallback(() => {
+    setNeoFilter('hazardous');
+    // Recargar NEOs pero filtrar solo peligrosos
+    // Usar la última carga de NEOs reales
+    setNeos(prev => prev.filter(n => n.is_potentially_hazardous_asteroid && !n._isHistorical));
+  }, []);
+
+  const showAllNeos = useCallback(() => {
+    setNeoFilter('all');
+    // Recargar datos NEO
+    const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
+    const feedUrl = `https://api.nasa.gov/neo/rest/v1/feed?api_key=${API_KEY}`;
+    setNeosLoading(true);
+    fetch(feedUrl)
+      .then(res => res.json())
+      .then(data => {
+        const neosArray = [];
+        Object.values(data.near_earth_objects || {}).forEach(dayList => {
+          dayList.forEach(item => neosArray.push(item));
+        });
+        setNeos(neosArray);
+      })
+      .catch(err => setNeosError(err.message))
+      .finally(() => setNeosLoading(false));
+  }, []);
+
   const handleEarthPointerDown = useCallback((event) => {
     if (!awaitingTarget) return; // Si no estamos esperando un clic, permitir que OrbitControls maneje el evento
     
@@ -188,19 +253,40 @@ const Simulacion = () => {
 
   const handleAsteroidHit = (target, data) => {
     console.log('Impact at', target, data);
-    // Guardamos la posición en coordenadas del mundo
-    setLastImpact({ position: target.clone(), data });
-  // === CÁLCULO CRÁTER USANDO craterCalculator (ver objeto documentado arriba) ===
-  const masa = data?.masa || 1000; // kg
-  const speedScene = data?.speed || 1; // velocidad interna (0.2..2.0 u/s)
-  const craterData = craterCalculator.computeCrater({ masaKg: masa, speedScene, planetRadius });
-  const { energyJ, radiusFinal: radius, v_m_s, km_s, D_t: D_t_m, D_final: finalDiameter_m, radiusUnitsPhysical: radiusUnits } = craterData;
-  console.log('[simulacion] crater radiusFinal (units):', craterData.radiusFinal, 'min/max', craterData.minVisible, craterData.maxVisible);
-  console.log('[simulacion] crater calc', {
-    ...craterData,
-    masa,
-    diameter_km: (finalDiameter_m/1000).toFixed(2)
-  });
+    
+    // === CÁLCULO CRÁTER USANDO craterCalculator (ver objeto documentado arriba) ===
+    const masa = data?.masa || 1000; // kg
+    const speedScene = data?.speed || 1; // velocidad interna (0.2..2.0 u/s)
+    const craterData = craterCalculator.computeCrater({ masaKg: masa, speedScene, planetRadius });
+    const { energyJ, radiusFinal: radius, v_m_s, km_s, D_t: D_t_m, D_final: finalDiameter_m, radiusUnitsPhysical: radiusUnits } = craterData;
+    
+    console.log('[simulacion] crater radiusFinal (units):', craterData.radiusFinal, 'min/max', craterData.minVisible, craterData.maxVisible);
+    console.log('[simulacion] crater calc', {
+      ...craterData,
+      masa,
+      diameter_km: (finalDiameter_m/1000).toFixed(2)
+    });
+
+    // === CONVERTIR POSICIÓN 3D A LAT/LON PARA ANÁLISIS NASA ===
+    // La posición target está en coordenadas 3D; convertir a latitud/longitud
+    const normalized = target.clone().sub(new THREE.Vector3(0, planetOffsetY, 0)).normalize();
+    const lat = (Math.asin(normalized.y) * 180) / Math.PI;
+    const lng = (Math.atan2(normalized.x, normalized.z) * 180) / Math.PI;
+    
+    console.log('[simulacion] Impact coordinates:', { lat: lat.toFixed(2), lng: lng.toFixed(2) });
+
+    // === ANÁLISIS COMPLETO DE IMPACTO (SISTEMA NASA) ===
+    const fullAnalysis = calculateFullImpact({
+      diameter: finalDiameter_m, // diámetro del cráter en metros
+      velocity: km_s, // velocidad en km/s
+      density: data?.densidad || 2500, // densidad del asteroide
+      lat,
+      lng
+    });
+    
+    console.log('[simulacion] Full Impact Analysis:', fullAnalysis);
+    setFullImpactAnalysis(fullAnalysis);
+    
     // Usar la posición exacta enviada por el asteroide (impacto real)
     let finalPos = target.clone();
     // Convertir la posición de mundo a coordenadas locales del mesh de la Tierra
@@ -215,7 +301,7 @@ const Simulacion = () => {
       console.warn('[simulacion] world/local conversion failed:', err);
     }
     // Si la posición está demasiado lejos del radio esperado, proyectamos al radio para evitar errores
-  // (note: planetRadius/planetOffsetY defined in parent scope)
+    // (note: planetRadius/planetOffsetY defined in parent scope)
     const rel = finalPos.clone().sub(new THREE.Vector3(0, planetOffsetY, 0));
     if (rel.length() > planetRadius + 0.02) {
       // fallback: proyectar al radio del planeta manteniendo el centro desplazado
@@ -233,36 +319,46 @@ const Simulacion = () => {
     const t = data?.tipo || params.tipo || 'Roca';
     if (t === 'Hierro') colorScheme = 'gris';
     else if (t === 'Mixto') colorScheme = 'amarillo';
-  // Guardamos también todos los datos físicos calculados para poder usarlos en la visualización (p.ej. tooltips)
-  const crater = { id: Date.now(), position: finalPos, radius, depth: radius * 0.25, colorScheme, data: { craterData, masa, speedScene } };
+    
+    // Guardamos también todos los datos físicos calculados para poder usarlos en la visualización (p.ej. tooltips)
+    const crater = { 
+      id: Date.now(), 
+      position: finalPos, 
+      radius, 
+      depth: radius * 0.25, 
+      colorScheme, 
+      data: { craterData, masa, speedScene, fullAnalysis, lat, lng } 
+    };
     setCraters(c => [...c, crater]);
     setAsteroids([]);
     setFreezeRotation(true); // detener rotación de la Tierra
+    
     // Debug helper: si está activo, añadir un marcador temporal en la escena para ver el punto de impacto
     if (showHelpers) {
       const markerId = `m-${Date.now()}`;
       const marker = { id: markerId, position: finalPos.clone(), ttl: Date.now() + 3000 };
       // guardamos como un cráter temporal usando radius muy pequeño pero distinto color
-  setCraters(c => [...c, { id: markerId, position: finalPos.clone(), radius: Math.max(radius*0.3, 0.01), depth: 0, colorScheme: 'amarillo', _temporary: true, data: { isMarker:true } }]);
+      setCraters(c => [...c, { id: markerId, position: finalPos.clone(), radius: Math.max(radius*0.3, 0.01), depth: 0, colorScheme: 'amarillo', _temporary: true, data: { isMarker:true } }]);
       // limpiamos el marcador después de 3s
       setTimeout(() => {
         setCraters(c => c.filter(x => x.id !== markerId));
       }, 3000);
     }
-    // Calcular energía y radios (para HUD informativo)
-  // Reusar energyJ de arriba (calculado con masa y velocidad reales)
-  // Si por alguna razón no existe, recálculamos
-  const masaForCalc = data?.masa || 1000; // kg
-  // Usar la velocidad ya calculada en craterData (km_s) -> m/s
-  const velocidadForCalc = craterData?.km_s ? craterData.km_s * 1000 : (v_m_s || 15000); // fallback 15 km/s
-  const energyJ_forHUD = typeof energyJ !== 'undefined' ? energyJ : 0.5 * masaForCalc * Math.pow(velocidadForCalc, 2);
-  const kilotons = energyJ_forHUD / (4.184 * Math.pow(10, 12));
-    // radios simplificados (km)
-    const total = Math.pow(kilotons, 0.33) * 0.5;
-    const moderate = Math.pow(kilotons, 0.33) * 1.5;
-    const light = Math.pow(kilotons, 0.33) * 3;
-    setLastImpact({ position: target.clone(), data, stats: { kilotons, total, moderate, light } });
-    // TODO futuro: animación de explosión temporal
+    
+    // Preparar datos legacy para el HUD (compatibilidad)
+    const kilotons = fullAnalysis.energy.kilotons;
+    const total = fullAnalysis.radii.total;
+    const moderate = fullAnalysis.radii.moderate;
+    const light = fullAnalysis.radii.light;
+    
+    setLastImpact({ 
+      position: target.clone(), 
+      data, 
+      stats: { kilotons, total, moderate, light },
+      fullAnalysis,
+      lat,
+      lng
+    });
   };
 
   return (
@@ -281,19 +377,96 @@ const Simulacion = () => {
 
         {/* --- NEO Catalog --- */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6 }}>Catálogo NEO (NASA)</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6 }}>
+            🎯 Catálogo NEO (NASA)
+          </div>
+          
+          {/* Botones de filtro */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+            <button 
+              onClick={showAllNeos}
+              style={{ 
+                fontSize: '0.7rem', 
+                padding: '4px 8px', 
+                borderRadius: 4, 
+                background: neoFilter === 'all' ? '#667eea' : '#ddd', 
+                color: neoFilter === 'all' ? '#fff' : '#333',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              📡 Todos (7d)
+            </button>
+            <button 
+              onClick={filterHazardous}
+              style={{ 
+                fontSize: '0.7rem', 
+                padding: '4px 8px', 
+                borderRadius: 4, 
+                background: neoFilter === 'hazardous' ? '#ff6b6b' : '#ddd', 
+                color: neoFilter === 'hazardous' ? '#fff' : '#333',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              ⚠️ Peligrosos
+            </button>
+            <button 
+              onClick={loadHistoricalEvents}
+              style={{ 
+                fontSize: '0.7rem', 
+                padding: '4px 8px', 
+                borderRadius: 4, 
+                background: neoFilter === 'historical' ? '#feca57' : '#ddd', 
+                color: neoFilter === 'historical' ? '#333' : '#333',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              📜 Históricos
+            </button>
+          </div>
+
           {neosLoading && <div style={{ fontSize: '0.85rem', color: '#666' }}>Cargando NEOs...</div>}
           {neosError && <div style={{ fontSize: '0.85rem', color: 'crimson' }}>Error: {neosError}</div>}
           {!neosLoading && !neosError && neos && neos.length > 0 && (
             <div style={{ maxHeight: 140, overflowY: 'auto', padding: 6, borderRadius: 6, background: 'rgba(0,0,0,0.03)' }}>
               {neos.slice(0,8).map((n, i) => {
                 const estDia = n.estimated_diameter?.meters?.estimated_diameter_max || n.estimated_diameter?.meters?.estimated_diameter_min || 50;
-                const velo = n.close_approach_data && n.close_approach_data[0] ? Number(n.close_approach_data[0].relative_velocity.kilometers_per_hour) / 1000 : 20;
+                const velo = n.close_approach_data && n.close_approach_data[0] ? Number(n.close_approach_data[0].relative_velocity.kilometers_per_second) : 20;
+                const isHazardous = n.is_potentially_hazardous_asteroid;
+                const isHistorical = n._isHistorical;
+                
                 return (
-                  <div key={n.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                    <div style={{ fontSize: '0.85rem' }}>
-                      <div style={{ fontWeight: 700 }}>{n.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>{(estDia).toFixed(0)} m • {velo.toFixed(1)} km/s</div>
+                  <div 
+                    key={n.id || i} 
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '6px 4px', 
+                      borderBottom: '1px solid rgba(0,0,0,0.04)',
+                      borderLeft: isHazardous ? '3px solid #ff6b6b' : '3px solid transparent',
+                      background: isHistorical ? 'rgba(254, 202, 87, 0.1)' : 'transparent'
+                    }}
+                  >
+                    <div style={{ fontSize: '0.85rem', flex: 1 }}>
+                      <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {isHazardous && <span>⚠️</span>}
+                        {isHistorical && <span>📜</span>}
+                        <span style={{ fontSize: '0.8rem' }}>{n.name}</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                        {(estDia).toFixed(0)} m • {velo.toFixed(1)} km/s
+                        {n.close_approach_data && n.close_approach_data[0] && (
+                          <> • {n.close_approach_data[0].close_approach_date}</>
+                        )}
+                      </div>
+                      {isHistorical && n._casualties && (
+                        <div style={{ fontSize: '0.7rem', color: '#e67e22', marginTop: 2 }}>
+                          {n._casualties}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <button onClick={() => {
@@ -304,9 +477,9 @@ const Simulacion = () => {
                         const masaEst = Math.round(volumen * asumDens);
                         // Map velocidad km/s -> slider 1..100 (approx)
                         const kmps = velo; // we computed km/s
-                        const velocidadSlider = Math.min(100, Math.max(1, Math.round((kmps / 25) * 100)));
+                        const velocidadSlider = Math.min(100, Math.max(1, Math.round((kmps / 70) * 100)));
                         setParams(p => ({ ...p, masa: masaEst, velocidad: velocidadSlider, densidad: asumDens, tipo: 'Mixto' }));
-                      }} style={{ padding: '6px 8px', borderRadius: 6, background: '#222', color: '#fff', border: 'none' }}>Usar</button>
+                      }} style={{ padding: '6px 8px', borderRadius: 6, background: '#222', color: '#fff', border: 'none', fontSize: '0.75rem', cursor: 'pointer' }}>Usar</button>
                     </div>
                   </div>
                 )
@@ -437,6 +610,12 @@ const Simulacion = () => {
           </div>
         </div>
       )}
+
+      {/* Panel de Consecuencias Detalladas (NASA IMPACTUS) */}
+      <ImpactConsequences 
+        impact={fullImpactAnalysis} 
+        show={!!fullImpactAnalysis && freezeRotation}
+      />
     </div>
   );
 };
