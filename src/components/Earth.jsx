@@ -17,11 +17,21 @@ export default function Earth({ earthRef, onPointerDown, paused=false, craters=[
 
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <pointLight position={[10, 10, 10]} intensity={0.8} />
+  {/* Luz ambiental más fuerte para aclarar la escena */}
+  <ambientLight intensity={0.9} />
+  {/* Luz hemisférica para simular cielo/terreno (suaviza sombras) */}
+  <hemisphereLight skyColor={0x88cfff} groundColor={0x553322} intensity={0.25} />
+  {/* Luz direccional tipo 'sol' para modelado de la iluminación */}
+  <directionalLight position={[5, 3, 5]} intensity={0.9} />
+  {/* Luz puntual suave para acentuar iluminación lateral */}
+  <pointLight position={[10, 10, 10]} intensity={0.6} />
       <mesh ref={mesh} position={[0, -0.4, 0]} rotation={[0, 0, 0]} onPointerDown={onPointerDown}>
         <sphereGeometry args={[2, 64, 64]} />
-        <meshStandardMaterial map={useLoader(TextureLoader, earthTexture)} />
+        <meshStandardMaterial
+          map={useLoader(TextureLoader, earthTexture)}
+          metalness={0.03}
+          roughness={0.82}
+        />
         {/* Cráteres incrustados: se posicionan como decals simples (anillos y discos) */}
         {craters.map(c => {
           // Convertir la posición del cráter (world) a coordenadas locales del mesh
