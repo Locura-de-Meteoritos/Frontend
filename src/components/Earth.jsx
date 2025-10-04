@@ -4,7 +4,7 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import { TextureLoader } from 'three';
 import earthTexture from '../assets/earth.jpg';
 
-export default function Earth({ earthRef }) {
+export default function Earth({ earthRef, onPointerDown }) {
   const mesh = earthRef || useRef();
 
   useFrame((_, delta) => {
@@ -15,7 +15,7 @@ export default function Earth({ earthRef }) {
     <>
       <ambientLight intensity={0.6} />
       <pointLight position={[10, 10, 10]} intensity={0.8} />
-      <mesh ref={mesh} position={[0, -0.4, 0]} rotation={[0, 0, 0]}>
+      <mesh ref={mesh} position={[0, -0.4, 0]} rotation={[0, 0, 0]} onPointerDown={onPointerDown}>
         <sphereGeometry args={[2, 64, 64]} />
         <meshStandardMaterial map={useLoader(TextureLoader, earthTexture)} />
       </mesh>

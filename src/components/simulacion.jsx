@@ -1,9 +1,9 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import Earth from "./Earth";
 import Background from "./Background";
 import Header from "./Header";
 import Footer from "./Footer";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Asteroid from "./Asteroid";
 import * as THREE from 'three';
 
@@ -33,53 +33,28 @@ const Simulacion = () => {
     // Optionally show a brief instruction (overlay handled below)
   };
 
-  const onCanvasClick = (event) => {
-    if (!awaitingTarget) return; // only act if we're waiting for the target click
-
-    // event is react-three-fiber pointer event
-    const { clientX, clientY } = event;
-    const rect = event.target.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 2 - 1;
-      // Prefer the ray provided by react-three-fiber pointer events.
-      // Some events don't include `camera` but do include `ray`, so use it when present.
-      const earthMesh = earthRef.current;
-      if (!earthMesh) return;
-
-      let intersects = [];
-      if (event.ray) {
-        // event.ray has origin & direction (THREE.Ray)
-        const r = event.ray;
-        const raycaster = new THREE.Raycaster(r.origin, r.direction);
-        intersects = raycaster.intersectObject(earthMesh, true);
-      } else {
-        // Fallback: compute from pointer screen coords and event.camera if available
-        const { clientX, clientY } = event;
-        // defensive: event.target may not be the canvas DOM element
-        const dom = event.target && event.target.getBoundingClientRect ? event.target : document.querySelector('canvas');
-        if (!dom) return;
-        const rect = dom.getBoundingClientRect();
-        const x = ((clientX - rect.left) / rect.width) * 2 - 1;
-        const y = -((clientY - rect.top) / rect.height) * 2 + 1;
-
-        const raycaster = new THREE.Raycaster();
-        const camera = event.camera;
-        if (!camera) return; // cannot proceed without a camera
-        raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-        intersects = raycaster.intersectObject(earthMesh, true);
-      }
-
-    // start position: from direction opposite of impact point, at distance 8
-    const dir = point.clone().normalize();
-    const start = dir.clone().multiplyScalar(8);
-
-    const speedM = Number(params.velocidad) || 20;
-
+  const handleEarthPointerDown = useCallback((event) => {
+    if (!awaitingTarget) return;
+    // event.point es el punto exacto en la superficie donde se hace click
+    const point = event.point.clone();
+    const { camera } = event;
+    // Dirección desde cámara hacia el punto
+    const dirCamToPoint = new THREE.Vector3().subVectors(point, camera.position).normalize();
+    // Posición inicial: un poco detrás de la cámara en la misma línea (para que se vea venir)
+    const start = camera.position.clone().add(dirCamToPoint.clone().multiplyScalar(2.5));
+    // Aseguramos que el start esté fuera de la esfera terrestre (radio=2) con un mínimo
+    if (start.length() < 2.2) {
+      start.copy(dirCamToPoint.clone().multiplyScalar(6));
+    }
+  console.log('[simulacion] spawn asteroid', { start: start.toArray(), target: point.toArray() });
+  // Escalado de velocidad: convertimos el valor (1-100) a una velocidad en unidades/segundo.
+  // Queremos algo claramente más lento: por ejemplo máx ~2 u/s y mín ~0.2 u/s
+  const raw = Number(params.velocidad) || 20; // 1..100
+  const speedM = (raw / 100) * 1.8 + 0.2; // rango 0.2 .. 2.0 aprox
     const id = idRef.current++;
-    setAsteroids((a) => [...a, { id, start, target: point, speed: speedM }]);
-
-    // exit awaiting mode
+  setAsteroids(a => [...a, { id, start, target: point, speed: speedM, tipo: params.tipo, masa: Number(params.masa), densidad: Number(params.densidad), angulo: Number(params.angulo) }]);
     setAwaitingTarget(false);
-  };
+  }, [awaitingTarget, params.velocidad]);
 
   const handleAsteroidHit = (target) => {
     console.log('Impact at', target);
@@ -111,8 +86,12 @@ const Simulacion = () => {
         <label className="block mb-2">Masa (kg)</label>
         <input name="masa" type="number" value={params.masa} onChange={handleChange} className="w-full mb-3 p-2 border rounded" />
 
-        <label className="block mb-2">Velocidad (km/s)</label>
-        <input name="velocidad" type="number" value={params.velocidad} onChange={handleChange} className="w-full mb-3 p-2 border rounded" />
+        <label className="block mb-1">Velocidad (relativa 1-100)</label>
+        <input name="velocidad" type="range" min="1" max="100" value={params.velocidad} onChange={handleChange} className="w-full mb-1" />
+        <div className="flex items-center gap-2 mb-2">
+          <input name="velocidad" type="number" min="1" max="100" value={params.velocidad} onChange={handleChange} className="w-24 p-2 border rounded" />
+          <span style={{fontSize:'0.75rem', color:'#555'}}>Vel. interna (u/s aprox): {(((Number(params.velocidad)||20)/100)*1.8+0.2).toFixed(2)}</span>
+        </div>
 
         <label className="block mb-2">Densidad (kg/m³)</label>
         <input name="densidad" type="number" value={params.densidad} onChange={handleChange} className="w-full mb-3 p-2 border rounded" />
@@ -141,11 +120,22 @@ const Simulacion = () => {
       )}
 
       <div style={{ position: "absolute", inset: 0, zIndex: 10 }}>
-        <Canvas camera={{ position: [0, 0.8, 6], fov: 60 }} onPointerDown={onCanvasClick}>
-          <Earth earthRef={earthRef} />
+        <Canvas camera={{ position: [0, 1.2, 6], fov: 60 }}>
+          <Earth earthRef={earthRef} onPointerDown={handleEarthPointerDown} />
 
           {asteroids.map(a => (
-            <Asteroid key={a.id} start={a.start} target={a.target} speed={a.speed} onHit={handleAsteroidHit} debug={showHelpers} />
+            <Asteroid
+              key={a.id}
+              start={a.start}
+              target={a.target}
+              speed={a.speed}
+              tipo={a.tipo}
+              masa={a.masa}
+              densidad={a.densidad}
+              angulo={a.angulo}
+              onHit={handleAsteroidHit}
+              debug={showHelpers}
+            />
           ))}
         </Canvas>
       </div>
