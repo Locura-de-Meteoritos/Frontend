@@ -19,7 +19,10 @@ const Body = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              className="bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-medium"
+              className="glass text-white px-8 py-4 rounded-lg text-lg font-medium relative 
+                         border-2 border-[#5932a1] shadow-[0_0_15px_#5932a1] 
+                         hover:translate-y-[-2px] hover:shadow-[0_0_25px_#5932a1]
+                         transition-all duration-300 ease-in-out transform"
               onClick={handleSimulationClick}
             >
               Empezar simulación
