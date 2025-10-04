@@ -1,10 +1,11 @@
+import img1 from '.././assets/LOGO METEOR MADNESS.png'
 const Header = () => {
   return (
     <nav className="glass border-b border-transparent relative z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-6">
           <div className="flex items-center space-x-2">
-            <img src="src/assets/LOGO METEOR MADNESS.png" alt="Logo" className="h-8 w-auto object-contain" />
+            <img src={img1} alt="Logo" className="h-8 w-auto object-contain" />
             <h1 className="text-xl font-semibold text-white">Locura de Meteoritos</h1>
           </div>
           <div className="hidden md:flex space-x-8">
