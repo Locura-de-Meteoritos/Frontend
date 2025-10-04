@@ -3,7 +3,7 @@ import Earth from "./Earth";
 import Background from "./Background";
 import Header from "./Header";
 import Footer from "./Footer";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Asteroid from "./Asteroid";
 import * as THREE from 'three';
 
@@ -24,6 +24,9 @@ const Simulacion = () => {
   const [awaitingTarget, setAwaitingTarget] = useState(false);
   const earthRef = useRef();
   const idRef = useRef(0);
+  const [neos, setNeos] = useState([]);
+  const [neosLoading, setNeosLoading] = useState(false);
+  const [neosError, setNeosError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,6 +38,35 @@ const Simulacion = () => {
     setAwaitingTarget(true);
     // Optionally show a brief instruction (overlay handled below)
   };
+
+  // Cargar la API de NEO de la NASA al montar
+  useEffect(() => {
+    let mounted = true;
+    const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
+    const feedUrl = `https://api.nasa.gov/neo/rest/v1/feed?api_key=${API_KEY}`;
+    async function load() {
+      setNeosLoading(true);
+      setNeosError(null);
+      try {
+        const res = await fetch(feedUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // data.near_earth_objects es un objeto por fecha; aplastamos a array
+        const neosArray = [];
+        Object.values(data.near_earth_objects || {}).forEach(dayList => {
+          dayList.forEach(item => neosArray.push(item));
+        });
+        if (mounted) setNeos(neosArray);
+      } catch (err) {
+        console.error('[simulacion] failed to load NEOs', err);
+        if (mounted) setNeosError(err.message || String(err));
+      } finally {
+        if (mounted) setNeosLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false };
+  }, []);
 
   const handleEarthPointerDown = useCallback((event) => {
     if (!awaitingTarget) return;
@@ -109,6 +141,16 @@ const Simulacion = () => {
     setCraters(c => [...c, crater]);
     setAsteroids([]);
     setFreezeRotation(true); // detener rotación de la Tierra
+    // Calcular energía y radios (para HUD informativo)
+    const masaForCalc = data?.masa || 1000; // kg
+    const velocidadForCalc = (data?.speed || 1) * 1000; // convertir a m/s aproximado
+    const energyJ = 0.5 * masaForCalc * Math.pow(velocidadForCalc, 2);
+    const kilotons = energyJ / (4.184 * Math.pow(10, 12));
+    // radios simplificados (km)
+    const total = Math.pow(kilotons, 0.33) * 0.5;
+    const moderate = Math.pow(kilotons, 0.33) * 1.5;
+    const light = Math.pow(kilotons, 0.33) * 3;
+    setLastImpact({ position: target.clone(), data, stats: { kilotons, total, moderate, light } });
     // TODO futuro: animación de explosión temporal
   };
 
@@ -125,6 +167,42 @@ const Simulacion = () => {
       {/* Panel lateral */}
       <aside style={{ position: 'absolute', left: 16, top: 96, width: 320, zIndex: 40, background: 'rgba(255,255,255,0.95)', padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
         <h3 className="text-lg font-semibold mb-4">Configurar Asteroide</h3>
+
+        {/* --- NEO Catalog --- */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6 }}>Catálogo NEO (NASA)</div>
+          {neosLoading && <div style={{ fontSize: '0.85rem', color: '#666' }}>Cargando NEOs...</div>}
+          {neosError && <div style={{ fontSize: '0.85rem', color: 'crimson' }}>Error: {neosError}</div>}
+          {!neosLoading && !neosError && neos && neos.length > 0 && (
+            <div style={{ maxHeight: 140, overflowY: 'auto', padding: 6, borderRadius: 6, background: 'rgba(0,0,0,0.03)' }}>
+              {neos.slice(0,8).map((n, i) => {
+                const estDia = n.estimated_diameter?.meters?.estimated_diameter_max || n.estimated_diameter?.meters?.estimated_diameter_min || 50;
+                const velo = n.close_approach_data && n.close_approach_data[0] ? Number(n.close_approach_data[0].relative_velocity.kilometers_per_hour) / 1000 : 20;
+                return (
+                  <div key={n.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 4px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontSize: '0.85rem' }}>
+                      <div style={{ fontWeight: 700 }}>{n.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#666' }}>{(estDia).toFixed(0)} m • {velo.toFixed(1)} km/s</div>
+                    </div>
+                    <div>
+                      <button onClick={() => {
+                        // Map diameter -> masa (volumen de esfera * densidad aproximada)
+                        const diameter = estDia;
+                        const asumDens = 3000; // kg/m3 as default
+                        const volumen = (4/3) * Math.PI * Math.pow(diameter/2, 3);
+                        const masaEst = Math.round(volumen * asumDens);
+                        // Map velocidad km/s -> slider 1..100 (approx)
+                        const kmps = velo; // we computed km/s
+                        const velocidadSlider = Math.min(100, Math.max(1, Math.round((kmps / 25) * 100)));
+                        setParams(p => ({ ...p, masa: masaEst, velocidad: velocidadSlider, densidad: asumDens, tipo: 'Mixto' }));
+                      }} style={{ padding: '6px 8px', borderRadius: 6, background: '#222', color: '#fff', border: 'none' }}>Usar</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         <label className="block mb-2">Tipo</label>
         <select name="tipo" value={params.tipo} onChange={handleChange} className="w-full mb-3 p-2 border rounded">
@@ -154,9 +232,14 @@ const Simulacion = () => {
           <label htmlFor="helpers">Mostrar helpers (debug)</label>
         </div>
 
-        <button onClick={handleSimulate} style={{ width: '100%', padding: '10px 12px', background: '#111', color: '#fff', borderRadius: 8 }}>
-          Simular impacto
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleSimulate} style={{ flex: 1, padding: '10px 12px', background: '#111', color: '#fff', borderRadius: 8 }}>
+            Simular impacto
+          </button>
+          <button onClick={() => { setCraters([]); setLastImpact(null); }} style={{ padding: '10px 12px', background: '#eee', color: '#000', borderRadius: 8, border: '1px solid #ddd' }}>
+            Borrar cráteres
+          </button>
+        </div>
       </aside>
 
       {/* Prompt overlay when awaiting click */}
@@ -206,6 +289,33 @@ const Simulacion = () => {
           >
             Reanudar rotación
           </button>
+        </div>
+      )}
+      {/* HUD informativo del último impacto */}
+      {lastImpact && lastImpact.stats && (
+        <div style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 60, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: 12, borderRadius: 10, width: 260 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Último impacto: {lastImpact.data?.tipo || '—'}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+            <div>Energía</div>
+            <div style={{ fontWeight: 700 }}>{lastImpact.stats.kilotons.toFixed(2)} kt</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8, fontSize: '0.85rem' }}>
+            <div style={{ background: 'rgba(255,107,107,0.08)', padding: 6, borderRadius: 6 }}>
+              <div style={{ fontSize: '0.75rem' }}>Destrucción</div>
+              <div style={{ fontWeight: 700 }}>{lastImpact.stats.total.toFixed(2)} km</div>
+            </div>
+            <div style={{ background: 'rgba(255,193,7,0.06)', padding: 6, borderRadius: 6 }}>
+              <div style={{ fontSize: '0.75rem' }}>Moderado</div>
+              <div style={{ fontWeight: 700 }}>{lastImpact.stats.moderate.toFixed(2)} km</div>
+            </div>
+            <div style={{ background: 'rgba(76,175,80,0.06)', padding: 6, borderRadius: 6 }}>
+              <div style={{ fontSize: '0.75rem' }}>Leve</div>
+              <div style={{ fontWeight: 700 }}>{lastImpact.stats.light.toFixed(2)} km</div>
+            </div>
+            <div style={{ padding: 6, borderRadius: 6 }}>
+              <button onClick={() => { setCraters([]); setLastImpact(null); setFreezeRotation(false); }} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: 'none', background: '#111', color: '#fff' }}>Cerrar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
