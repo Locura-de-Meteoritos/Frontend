@@ -4,3 +4,8 @@
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+:root{
+  --bg-color: #030014;
+  --text-on-bg: #ffffff;
+}
