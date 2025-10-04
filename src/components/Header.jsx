@@ -11,7 +11,7 @@ const Header = () => {
             <a href="#" className="text-gray-700 hover:text-gray-900 transition-colors">Acerca</a>
             <a href="#" className="text-gray-700 hover:text-gray-900 transition-colors">Servicios</a>
             <a href="#" className="text-gray-700 hover:text-gray-900 transition-colors">Contacto</a>
-            <a hidden href="#" className="text-gray-700 hover:text-gray-900 transition-colors">Empezar simulacion</a>
+            <a href="#" className="text-gray-700 hover:text-gray-900 transition-colors">Empezar simulacion</a>
           </div>
           <button className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-colors">
             Comenzar
