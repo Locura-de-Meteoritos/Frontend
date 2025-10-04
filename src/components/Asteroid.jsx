@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export default function Asteroid({ start, target, speed = 0.5, onHit, debug = false, tipo='Roca', masa=1000, densidad=3000, angulo=45 }) {
+export default function Asteroid({ start, target, speed = 0.5, onHit, debug = false, tipo='Roca', masa=1000, densidad=3000, angulo=45, color }) {
   const mesh = useRef()
   const dir = useRef(new THREE.Vector3())
   const distance = useRef(0)
@@ -24,7 +24,9 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
     traveled.current += move
     if (traveled.current >= distance.current) {
       if (debug) console.log('[Asteroid] impact at', target.toArray())
-      if (onHit) onHit(target, { masa, tipo, densidad, angulo, speed })
+      // Usar la posición real del mesh en el momento del impacto para mayor precisión
+      const impactPos = mesh.current.position.clone()
+      if (onHit) onHit(impactPos, { masa, tipo, densidad, angulo, speed })
       mesh.current.visible = false
       return
     }
@@ -38,7 +40,7 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
 
   // Render as a textured sphere. Use start.toArray() so react-three accepts position reliably.
   // Apariencia dinámica basada en parámetros
-  const tipoColor = {
+  const tipoColor = color || {
     'Roca': '#8b6d4b',
     'Hierro': '#b6bcc7',
     'Mixto': '#a8865a'

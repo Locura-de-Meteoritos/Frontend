@@ -23,9 +23,19 @@ export default function Earth({ earthRef, onPointerDown, paused=false, craters=[
         <sphereGeometry args={[2, 64, 64]} />
         <meshStandardMaterial map={useLoader(TextureLoader, earthTexture)} />
         {/* Cráteres incrustados: se posicionan como decals simples (anillos y discos) */}
-        {craters.map(c => (
-          <Crater key={c.id} position={c.position} radius={c.radius} depth={c.depth} colorScheme={c.colorScheme || 'rojo'} />
-        ))}
+        {craters.map(c => {
+          // Convertir la posición del cráter (world) a coordenadas locales del mesh
+          let localPos = c.position;
+          try {
+            if (mesh && mesh.current && mesh.current.worldToLocal) {
+              localPos = mesh.current.worldToLocal(c.position.clone());
+            }
+          } catch (err) {
+            // si falla, mantener la posición tal cual (fallback)
+            // console.warn('[Earth] worldToLocal failed', err)
+          }
+          return <Crater key={c.id} localPosition={localPos} radius={c.radius} depth={c.depth} colorScheme={c.colorScheme || 'rojo'} planetRadius={2} />
+        })}
       </mesh>
       <OrbitControls enableZoom={true} />
       <Stars />

@@ -19,6 +19,7 @@ const Simulacion = () => {
   const [showHelpers, setShowHelpers] = useState(false);
   const [freezeRotation, setFreezeRotation] = useState(false);
   const [craters, setCraters] = useState([]);
+  const [lastImpact, setLastImpact] = useState(null);
   const [asteroids, setAsteroids] = useState([]);
   const [awaitingTarget, setAwaitingTarget] = useState(false);
   const earthRef = useRef();
@@ -54,20 +55,57 @@ const Simulacion = () => {
   const raw = Number(params.velocidad) || 20; // 1..100
   const speedM = (raw / 100) * 1.8 + 0.2; // rango 0.2 .. 2.0 aprox
     const id = idRef.current++;
-  setAsteroids(a => [...a, { id, start, target: point, speed: speedM, tipo: params.tipo, masa: Number(params.masa), densidad: Number(params.densidad), angulo: Number(params.angulo) }]);
+  // Determinar color visible del asteroide según su tipo
+  let asteroidColor = '#8b6d4b';
+  if (params.tipo === 'Hierro') asteroidColor = '#b6bcc7';
+  else if (params.tipo === 'Mixto') asteroidColor = '#a8865a';
+  setAsteroids(a => [...a, { id, start, target: point, speed: speedM, tipo: params.tipo, masa: Number(params.masa), densidad: Number(params.densidad), angulo: Number(params.angulo), color: asteroidColor }]);
     setAwaitingTarget(false);
   }, [awaitingTarget, params.velocidad]);
 
   const handleAsteroidHit = (target, data) => {
     console.log('Impact at', target, data);
+    // Guardamos la posición en coordenadas del mundo
+    setLastImpact({ position: target.clone(), data });
     // Crear cráter: escalado simple basado en masa y velocidad
     const masa = data?.masa || 1000;
     const vel = data?.speed || 1;
     // Radio base: masa^(1/6) * factor velocidad
     const radius = Math.min(0.9, Math.max(0.12, Math.cbrt(Math.sqrt(masa)) * 0.02 * (0.6 + vel)));
-  // Alternar color para diferenciarlos (rojo / amarillo)
-  const colorScheme = Math.random() < 0.5 ? 'rojo' : 'amarillo';
-  const crater = { id: Date.now(), position: target.clone(), radius, depth: radius * 0.25, colorScheme };
+    // Usar la posición exacta enviada por el asteroide (impacto real)
+    let finalPos = target.clone();
+    // Convertir la posición de mundo a coordenadas locales del mesh de la Tierra
+    // para evitar desplazamientos por offset/rotación
+    try {
+      if (earthRef && earthRef.current && earthRef.current.worldToLocal) {
+        const local = earthRef.current.worldToLocal(finalPos.clone());
+        // Ahora reconstruimos la posición final a partir de las coordenadas locales
+        finalPos = earthRef.current.localToWorld(local.clone());
+      }
+    } catch (err) {
+      console.warn('[simulacion] world/local conversion failed:', err);
+    }
+    // Si la posición está demasiado lejos del radio esperado, proyectamos al radio para evitar errores
+    const planetRadius = 2;
+    const planetOffsetY = -0.4;
+    const rel = finalPos.clone().sub(new THREE.Vector3(0, planetOffsetY, 0));
+    if (rel.length() > planetRadius + 0.02) {
+      // fallback: proyectar al radio del planeta manteniendo el centro desplazado
+      const centered = rel.clone().normalize().multiplyScalar(planetRadius);
+      finalPos = centered.add(new THREE.Vector3(0, planetOffsetY, 0));
+    } else {
+      // Asegurar que finalPos esté exactamente a la distancia del radio (evita pequeñas desviaciones)
+      const norm = rel.length();
+      if (Math.abs(norm - planetRadius) > 1e-4) {
+        finalPos = rel.clone().normalize().multiplyScalar(planetRadius).add(new THREE.Vector3(0, planetOffsetY, 0));
+      }
+    }
+    // Elegir color del cráter según el tipo del asteroide
+    let colorScheme = 'rojo';
+    const t = data?.tipo || params.tipo || 'Roca';
+    if (t === 'Hierro') colorScheme = 'gris';
+    else if (t === 'Mixto') colorScheme = 'amarillo';
+    const crater = { id: Date.now(), position: finalPos, radius, depth: radius * 0.25, colorScheme };
     setCraters(c => [...c, crater]);
     setAsteroids([]);
     setFreezeRotation(true); // detener rotación de la Tierra

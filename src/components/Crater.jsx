@@ -9,13 +9,23 @@ import React from 'react'
     depth: número (no se usa para geometría aún, reservado para mejoras)
     colorScheme: 'rojo' | 'amarillo'
 */
-export default function Crater({ position, radius, depth=0.05, colorScheme='rojo' }) {
-  if (!position) return null
-  const normal = position.clone().normalize()
+export default function Crater({ localPosition, position, radius, depth=0.05, colorScheme='rojo', planetRadius=2 }) {
+  // Soportamos dos modos:
+  // - si `localPosition` está presente, asumimos que es la posición del cráter en coordenadas locales del mesh de la Tierra (recomendado)
+  // - si solo `position` (world) está presente, calculamos como antes
+  const useLocal = !!localPosition
+  const loc = useLocal ? localPosition.clone() : null
+  if (!useLocal && !position) return null
+
+  // Centro del planeta en espacio local del mesh = (0,0,0)
+  // Si tenemos `localPosition`, trabajamos en espacio local: la normal es localPosition.normalized()
+  const adjusted = useLocal ? loc.clone() : position.clone().sub(new THREE.Vector3(0, -0.4, 0))
+  // Normal desde el centro del planeta hacia el punto de impacto (en el mismo espacio)
+  const normal = adjusted.clone().normalize()
   const quat = new THREE.Quaternion()
+  // Alineamos el eje Z local del grupo con la normal de la superficie
   quat.setFromUnitVectors(new THREE.Vector3(0,0,1), normal)
   const euler = new THREE.Euler().setFromQuaternion(quat)
-
   const palette = colorScheme === 'amarillo' ? {
     rim: '#eab308',       // amarillo dorado
     inner: '#facc15',     // interior más claro
@@ -30,8 +40,12 @@ export default function Crater({ position, radius, depth=0.05, colorScheme='rojo
 
   const ringScale = radius * 1.6
 
+  // Si estamos en espacio local, la posición local en la superficie es normal * planetRadius
+  const localSurfacePos = normal.clone().multiplyScalar(planetRadius)
+
   return (
-    <group position={normal.multiplyScalar(2)} rotation={euler}>
+    // Cuando el cráter se renderice como hijo del mesh de la Tierra, usamos coords locales
+    <group position={localSurfacePos} rotation={euler}>
       {/* Borde del cráter */}
       <mesh>
         <ringGeometry args={[radius * 0.9, radius * 1.2, 40]} />
