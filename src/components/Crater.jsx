@@ -14,7 +14,7 @@ import craterTexSrc from '../assets/s6s6s6jj.png'
     planetRadius: número (radio de la Tierra en unidades de escena)
     planetOffsetY: número (offset Y del mesh de la Tierra en unidades de escena)
 */
-export default function Crater({ localPosition, position, radius, depth=0.05, planetRadius=2, planetOffsetY=-0.4 }) {
+export default function Crater({ localPosition, position, radius, depth=0.05, planetRadius=2, planetOffsetY=-0.4, data }) {
   const useLocal = !!localPosition
   const loc = useLocal ? localPosition.clone() : null
   if (!useLocal && !position) return null
@@ -30,7 +30,7 @@ export default function Crater({ localPosition, position, radius, depth=0.05, pl
   const diameter = radius * 2
 
   // Evitar z-fighting: colocar el cráter ligeramente por encima de la superficie, luego hundir un poco el plano
-  const outwardOffset = Math.max(radius * 0.02, planetRadius * 0.0005)
+  const outwardOffset = Math.max(radius * 0.025, planetRadius * 0.0007)
   const localSurfacePos = normal.clone().multiplyScalar(planetRadius + outwardOffset)
 
   // Cargar textura del cráter (PNG con alpha)
@@ -42,13 +42,18 @@ export default function Crater({ localPosition, position, radius, depth=0.05, pl
   useEffect(() => {
     if (!logged.current) {
       try {
+        const craterData = data?.craterData;
+        const physicalDiameterKm = craterData ? (craterData.D_final/1000).toFixed(2) : undefined;
         console.log('[Crater] mount', {
           radius,
           useLocal,
           hasLocal: !!localPosition,
-          adjustedLen: adjusted.length().toFixed(4),
+            adjustedLen: adjusted.length().toFixed(4),
           planetRadius,
           outwardOffset,
+          physicalDiameterKm,
+          energyTJ: craterData ? (craterData.energyJ/1e12).toFixed(3) : undefined,
+          exaggeration: craterData?.exaggeration,
         })
       } catch (e) {}
       logged.current = true
@@ -59,22 +64,26 @@ export default function Crater({ localPosition, position, radius, depth=0.05, pl
 
   return (
     <group position={localSurfacePos} rotation={euler}>
-      {/* Plano texturizado del cráter */}
-      <mesh position={[0,0,-Math.max(0.004, outwardOffset * 0.35)]} frustumCulled={false}> 
+      {/* Plano texturizado del cráter: colocamos el plano ligeramente hacia afuera */}
+      <mesh renderOrder={999} position={[0,0,Math.max(0.0015, outwardOffset * 0.06)]} frustumCulled={false}> 
         <planeGeometry args={[diameter, diameter]} />
         <meshStandardMaterial
           map={craterTexture}
           transparent
-          alphaTest={0.15}
-          depthWrite={false}
+          alphaTest={0.08}
+          depthWrite={true}
           roughness={0.85}
           metalness={0.05}
+          side={THREE.DoubleSide}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={1}
         />
       </mesh>
       {/* Halo simple opcional (mantiene algo del look anterior, escalado ligero) */}
-      <mesh position={[0,0,0.002]} scale={[1,1,1]}> 
+      <mesh renderOrder={998} position={[0,0,Math.max(0.0025, outwardOffset * 0.08)]} scale={[1,1,1]}> 
         <ringGeometry args={[radius * 1.05, radius * 1.38, 48]} />
-        <meshBasicMaterial color="#ffffff" opacity={0.28} transparent />
+        <meshBasicMaterial side={THREE.DoubleSide} color="#ffffff" opacity={0.28} transparent />
       </mesh>
     </group>
   )

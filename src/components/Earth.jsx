@@ -44,7 +44,7 @@ export default function Earth({ earthRef, onPointerDown, paused=false, craters=[
             // si falla, mantener la posición tal cual (fallback)
             // console.warn('[Earth] worldToLocal failed', err)
           }
-          return <Crater key={c.id} localPosition={localPos} radius={c.radius} depth={c.depth} colorScheme={c.colorScheme || 'rojo'} planetRadius={planetRadius} planetOffsetY={planetOffsetY} />
+          return <Crater key={c.id} localPosition={localPos} radius={c.radius} depth={c.depth} colorScheme={c.colorScheme || 'rojo'} planetRadius={planetRadius} planetOffsetY={planetOffsetY} data={c.data} />
         })}
       </mesh>
       <OrbitControls enableZoom={true} />

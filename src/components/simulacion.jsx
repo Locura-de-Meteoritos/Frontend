@@ -33,6 +33,10 @@ const Simulacion = () => {
     setParams((p) => ({ ...p, [name]: value }));
   };
 
+  // Predicción en vivo del cráter según parámetros actuales (para mostrar en el panel)
+  // Nota: la evaluación de `previewCrater` debe ocurrir después de declarar `craterCalculator`
+  // para evitar el ReferenceError (TDZ). Se define más abajo, justo después del objeto `craterCalculator`.
+
   const handleSimulate = () => {
     // Enter "awaiting click" mode: user must click on the planet to choose impact point
     setAwaitingTarget(true);
@@ -45,6 +49,82 @@ const Simulacion = () => {
   const KM_PER_UNIT = 1000; // 1 unidad = 1000 km
   const planetRadius = REAL_EARTH_RADIUS_KM / KM_PER_UNIT; // ej. ~6.371 unidades
   const planetOffsetY = -0.2 * planetRadius; // mismo offset relativo que antes (-0.4 cuando radius=2)
+
+    // ============================================================================
+    // === OBJETO / UTILIDAD DE CÁLCULO FÍSICO DEL CRÁTER ========================
+    // Este objeto centraliza las fórmulas para:
+    //  - Convertir la velocidad interna (slider 1..100 -> speedScene 0.2..2.0 u/s) a km/s reales
+    //  - Calcular energía cinética E = 0.5 * m * v^2
+    //  - Estimar un diámetro físico de cráter (modelo muy simplificado / pedagógico)
+    //  - Convertir ese diámetro a unidades de la escena (1 unidad = 1000 km)
+    //  - Aplicar una exageración visual controlada para mantener visibilidad y diferencias
+    // Devuelve además valores intermedios para poder mostrarlos / depurarlos.
+    // NOTA: Mantiene la textura y el pipeline existente sin alterar la lógica de spawn.
+    // ============================================================================
+    const craterCalculator = {
+      MIN_KM_S: 11,
+      MAX_KM_S: 70,
+      KM_PER_UNIT,
+      // Mapea la velocidad interna (0.2..2.0 u/s) a km/s (rango 11..70)
+      mapSceneSpeedToKmS(speedScene) {
+        const span = this.MAX_KM_S - this.MIN_KM_S;
+        return this.MIN_KM_S + ((speedScene - 0.2) / 1.8) * span;
+      },
+      // Energía cinética en Joules
+      energyJ(masaKg, v_m_s) {
+        return 0.5 * masaKg * Math.pow(v_m_s, 2);
+      },
+      // Diámetro transitorio (m) usando ley de potencia: D_t = C * E^(1/3.4)
+      transientDiameterMeters(energyJ) {
+        const C = 0.032; // coeficiente empírico ajustado para mostrar valores razonables
+        return C * Math.pow(energyJ, 1/3.4);
+      },
+      // Ajuste a diámetro final (m) (simple factor)
+      finalDiameterMeters(D_t_m) {
+        return D_t_m * 1.3;
+      },
+      // Convierte diámetro físico (m) a radio en unidades de escena
+      diameterMetersToRadiusUnits(finalDiameter_m) {
+        const diameter_km = finalDiameter_m / 1000;
+        return (diameter_km / this.KM_PER_UNIT) / 2; // radio
+      },
+      // Exageración visual dependiente de la energía (escala logarítmica sub-lineal)
+      exaggerationFactor(energyJ) {
+        const logE = Math.log10(Math.max(energyJ, 1));
+        let ex = 1 + (logE - 14) * 0.25; // baseline ~1e14 J
+        return THREE.MathUtils.clamp(ex, 0.7, 4.8);
+      },
+      // Calcula radio visual final y devuelve todos los datos intermedios
+      computeCrater({ masaKg, speedScene, planetRadius }) {
+        const km_s_raw = this.mapSceneSpeedToKmS(speedScene);
+        const km_s = THREE.MathUtils.clamp(km_s_raw, this.MIN_KM_S, this.MAX_KM_S);
+        const v_m_s = km_s * 1000;
+        const E = this.energyJ(masaKg, v_m_s);
+        const D_t = this.transientDiameterMeters(E);
+        const D_final = this.finalDiameterMeters(D_t);
+        const rUnitsPhysical = this.diameterMetersToRadiusUnits(D_final);
+        const ex = this.exaggerationFactor(E);
+        let rVisual = rUnitsPhysical * ex;
+        // Límite de visibilidad (mínimo y máximo coherente con el planeta)
+        // Elevamos el mínimo para asegurar que los cráteres sean visibles en la cámara por defecto
+        // planetRadius ~6.37 -> minVisible ~0.02..0.04 (20..40 km visual radio) dependiendo del planeta
+        const minVisible = Math.max(planetRadius * 0.0025, 0.02);
+        const maxVisible = planetRadius * 0.12;
+        rVisual = THREE.MathUtils.clamp(rVisual, minVisible, maxVisible);
+        return {
+          km_s, v_m_s, energyJ: E, D_t, D_final,
+          radiusUnitsPhysical: rUnitsPhysical,
+          exaggeration: ex,
+          radiusFinal: rVisual,
+          minVisible, maxVisible,
+          logE: Math.log10(Math.max(E,1))
+        };
+      }
+    };
+
+  // Calcular predicción del cráter ahora que `craterCalculator` está inicializado
+  const previewSpeedScene = ((Number(params.velocidad) || 20) / 100) * 1.8 + 0.2;
+  const previewCrater = craterCalculator.computeCrater({ masaKg: Number(params.masa || 1000), speedScene: previewSpeedScene, planetRadius });
 
   // Cargar la API de NEO de la NASA al montar
   useEffect(() => {
@@ -76,7 +156,11 @@ const Simulacion = () => {
   }, []);
 
   const handleEarthPointerDown = useCallback((event) => {
-    if (!awaitingTarget) return;
+    if (!awaitingTarget) return; // Si no estamos esperando un clic, permitir que OrbitControls maneje el evento
+    
+    // Detener propagación para evitar que OrbitControls interfiera durante el spawn
+    event.stopPropagation();
+    
     // event.point es el punto exacto en la superficie donde se hace click
     const point = event.point.clone();
     const { camera } = event;
@@ -106,37 +190,16 @@ const Simulacion = () => {
     console.log('Impact at', target, data);
     // Guardamos la posición en coordenadas del mundo
     setLastImpact({ position: target.clone(), data });
-  // Crear cráter: estimación basada en energía cinética y escala física
+  // === CÁLCULO CRÁTER USANDO craterCalculator (ver objeto documentado arriba) ===
   const masa = data?.masa || 1000; // kg
-  const speedScene = data?.speed || 1; // velocidad en unidades de escena (0.2..2.0 aprox)
-  // Mapear speedScene a una velocidad realista en km/s (ej. 11..70 km/s)
-  const minKmS = 11;
-  const maxKmS = 70;
-  const km_s = minKmS + ((speedScene - 0.2) / 1.8) * (maxKmS - minKmS);
-  const clamped_km_s = Math.max(minKmS, Math.min(maxKmS, km_s));
-  const v_m_s = clamped_km_s * 1000; // m/s
-  // Energía cinética (J)
-  const energyJ = 0.5 * masa * Math.pow(v_m_s, 2);
-  // Estimación empírica del diámetro del cráter (transient) en metros
-  // usamos una ley de potencia: D_t (m) ~= C * E^(1/3.4). C elegido para producir diámetros razonables.
-  const craterCoeff = 0.032;
-  const D_t_m = craterCoeff * Math.pow(energyJ, 1 / 3.4);
-  const finalDiameter_m = D_t_m * 1.3; // factor para pasar a diámetro final aproximado
-  // Convertir diámetro (m) a unidades de escena (1 unidad = KM_PER_UNIT km)
-  const diameter_km = finalDiameter_m / 1000.0;
-  const radiusUnits = (diameter_km / KM_PER_UNIT) / 2.0;
-  // Ajustes visuales: aumentar el mínimo visible y aplicar un factor para cráteres pequeños
-  // Escalado visual ajustado: los cráteres físicamente correctos (metros) se vuelven invisibles
-  // a la escala planeta (~6.371 u). Exageramos para fines educativos.
-  const visualScaleFactor = 10.0; // antes 1.6 -> multiplicamos para hacerlos claramente visibles
-  const minRadiusUnits = Math.max(planetRadius * 0.005, 0.03); // antes 0.0004*R -> ahora ~0.5% del radio o 0.03 u (~30 km)
-  const maxRadiusUnits = planetRadius * 0.28; // permitir cráteres grandes (antes 0.18)
-  const radiusRaw = Math.max(minRadiusUnits, Math.min(maxRadiusUnits, radiusUnits));
-  const radius = radiusRaw * visualScaleFactor;
-  console.log('[simulacion] crater sizing', {
-    masa, v_m_s, energyJ: Math.round(energyJ), D_t_m: Math.round(D_t_m), finalDiameter_m: Math.round(finalDiameter_m),
-    diameter_km: diameter_km.toFixed(2), radiusUnitsRaw: radiusUnits.toExponential(3),
-    radiusClamped: radiusRaw.toFixed(5), radiusVisual: radius.toFixed(5)
+  const speedScene = data?.speed || 1; // velocidad interna (0.2..2.0 u/s)
+  const craterData = craterCalculator.computeCrater({ masaKg: masa, speedScene, planetRadius });
+  const { energyJ, radiusFinal: radius, v_m_s, km_s, D_t: D_t_m, D_final: finalDiameter_m, radiusUnitsPhysical: radiusUnits } = craterData;
+  console.log('[simulacion] crater radiusFinal (units):', craterData.radiusFinal, 'min/max', craterData.minVisible, craterData.maxVisible);
+  console.log('[simulacion] crater calc', {
+    ...craterData,
+    masa,
+    diameter_km: (finalDiameter_m/1000).toFixed(2)
   });
     // Usar la posición exacta enviada por el asteroide (impacto real)
     let finalPos = target.clone();
@@ -170,7 +233,8 @@ const Simulacion = () => {
     const t = data?.tipo || params.tipo || 'Roca';
     if (t === 'Hierro') colorScheme = 'gris';
     else if (t === 'Mixto') colorScheme = 'amarillo';
-  const crater = { id: Date.now(), position: finalPos, radius, depth: radius * 0.25, colorScheme };
+  // Guardamos también todos los datos físicos calculados para poder usarlos en la visualización (p.ej. tooltips)
+  const crater = { id: Date.now(), position: finalPos, radius, depth: radius * 0.25, colorScheme, data: { craterData, masa, speedScene } };
     setCraters(c => [...c, crater]);
     setAsteroids([]);
     setFreezeRotation(true); // detener rotación de la Tierra
@@ -179,7 +243,7 @@ const Simulacion = () => {
       const markerId = `m-${Date.now()}`;
       const marker = { id: markerId, position: finalPos.clone(), ttl: Date.now() + 3000 };
       // guardamos como un cráter temporal usando radius muy pequeño pero distinto color
-      setCraters(c => [...c, { id: markerId, position: finalPos.clone(), radius: Math.max(radius*0.3, 0.01), depth: 0, colorScheme: 'amarillo', _temporary: true }]);
+  setCraters(c => [...c, { id: markerId, position: finalPos.clone(), radius: Math.max(radius*0.3, 0.01), depth: 0, colorScheme: 'amarillo', _temporary: true, data: { isMarker:true } }]);
       // limpiamos el marcador después de 3s
       setTimeout(() => {
         setCraters(c => c.filter(x => x.id !== markerId));
@@ -189,7 +253,8 @@ const Simulacion = () => {
   // Reusar energyJ de arriba (calculado con masa y velocidad reales)
   // Si por alguna razón no existe, recálculamos
   const masaForCalc = data?.masa || 1000; // kg
-  const velocidadForCalc = clamped_km_s * 1000; // m/s usado arriba
+  // Usar la velocidad ya calculada en craterData (km_s) -> m/s
+  const velocidadForCalc = craterData?.km_s ? craterData.km_s * 1000 : (v_m_s || 15000); // fallback 15 km/s
   const energyJ_forHUD = typeof energyJ !== 'undefined' ? energyJ : 0.5 * masaForCalc * Math.pow(velocidadForCalc, 2);
   const kilotons = energyJ_forHUD / (4.184 * Math.pow(10, 12));
     // radios simplificados (km)
@@ -248,6 +313,14 @@ const Simulacion = () => {
               })}
             </div>
           )}
+        </div>
+
+        {/* Predicción del cráter con parámetros actuales */}
+        <div style={{ marginBottom: 12, padding: 8, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 6 }}>Predicción del cráter</div>
+          <div style={{ fontSize: '0.85rem', color: '#333' }}>Diámetro físico: <strong>{(previewCrater.D_final/1000).toFixed(2)}</strong> km</div>
+          <div style={{ fontSize: '0.85rem', color: '#333' }}>Energía: <strong>{(previewCrater.energyJ / (4.184e12)).toFixed(2)}</strong> kt</div>
+          <div style={{ fontSize: '0.85rem', color: '#333' }}>Radio visual (escena): <strong>{previewCrater.radiusFinal.toFixed(3)}</strong> u</div>
         </div>
 
         <label className="block mb-2">Tipo</label>
