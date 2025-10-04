@@ -366,10 +366,7 @@ const Simulacion = () => {
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <Background />
       </div>
-
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 30, pointerEvents: 'auto', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(6px)' }}>
-        <Header />
-      </div>
+      <Header />
 
       {/* Panel lateral */}
       <aside style={{ position: 'absolute', left: 16, top: 96, width: 320, zIndex: 40, background: 'rgba(255,255,255,0.95)', padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
