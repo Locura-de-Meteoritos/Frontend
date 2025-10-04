@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import React, { useEffect, useRef } from 'react'
 import { useLoader } from '@react-three/fiber'
 import { TextureLoader } from 'three'
-import craterTexSrc from '../assets/crater.png'
+import craterTexSrc from '../assets/s6s6s6jj.png'
 
 /*
   Componente Crater
