@@ -4,10 +4,11 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import { TextureLoader } from 'three';
 import earthTexture from '../assets/earth.jpg';
 
-export default function Earth({ earthRef, onPointerDown }) {
+export default function Earth({ earthRef, onPointerDown, paused=false }) {
   const mesh = earthRef || useRef();
 
   useFrame((_, delta) => {
+    if (paused) return;
     if (mesh.current) mesh.current.rotation.y += 0.08 * delta;
   });
 
