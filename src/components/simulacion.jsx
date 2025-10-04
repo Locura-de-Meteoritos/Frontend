@@ -139,10 +139,6 @@ const Simulacion = () => {
           ))}
         </Canvas>
       </div>
-
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 30, pointerEvents: 'auto', backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(6px)' }}>
-        <Footer />
-      </div>
     </div>
   );
 };
