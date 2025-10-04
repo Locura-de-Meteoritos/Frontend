@@ -5,6 +5,7 @@ import './index.css';
 import App from './App.jsx';
 import Simulacion from './components/simulacion.jsx';
 
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>

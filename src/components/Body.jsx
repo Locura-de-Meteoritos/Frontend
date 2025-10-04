@@ -8,18 +8,22 @@ const Body = () => {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
             Descubre el universo
             <br />
-            <span className="text-gray-600">a tu alcance</span>
+            <span className="text-white">a tu alcance</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-white text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
             Explora la fascinante colección de meteoritos y aprende sobre los misterios 
             del espacio exterior con nuestra experiencia única e interactiva.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              className="bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-medium"
+              className="text-white px-8 py-4 rounded-lg text-lg font-medium relative 
+                         bg-[rgb(138,43,226)] border-2 border-[rgb(158,63,246)] 
+                         shadow-[0_0_20px_rgba(138,43,226,0.6)]
+                         hover:scale-105 hover:bg-[rgb(158,63,246)] hover:shadow-[0_0_30px_rgba(138,43,226,0.9)]
+                         transition-all duration-300 ease-out"
               onClick={handleSimulationClick}
             >
               Empezar simulación
