@@ -15,10 +15,7 @@ const Body = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-medium">
-              Explorar Colección
-            </button>
-            <button className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:bg-gray-50 transition-colors text-lg font-medium">
-              Ver Documentación
+              Empezar simulación
             </button>
           </div>
         </div>
