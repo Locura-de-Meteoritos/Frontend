@@ -8,12 +8,12 @@ const Body = () => {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
             Descubre el universo
             <br />
-            <span className="text-gray-600">a tu alcance</span>
+            <span className="text-white">a tu alcance</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-white text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
             Explora la fascinante colección de meteoritos y aprende sobre los misterios 
             del espacio exterior con nuestra experiencia única e interactiva.
           </p>
