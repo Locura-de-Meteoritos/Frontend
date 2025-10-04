@@ -39,6 +39,13 @@ const Simulacion = () => {
     // Optionally show a brief instruction (overlay handled below)
   };
 
+  // Escala realista de la Tierra (unidades del mundo -> km)
+  // Definimos 1 unidad = 1000 km para mantener números manejables en la escena.
+  const REAL_EARTH_RADIUS_KM = 6371; // km
+  const KM_PER_UNIT = 1000; // 1 unidad = 1000 km
+  const planetRadius = REAL_EARTH_RADIUS_KM / KM_PER_UNIT; // ej. ~6.371 unidades
+  const planetOffsetY = -0.2 * planetRadius; // mismo offset relativo que antes (-0.4 cuando radius=2)
+
   // Cargar la API de NEO de la NASA al montar
   useEffect(() => {
     let mounted = true;
@@ -77,9 +84,9 @@ const Simulacion = () => {
     const dirCamToPoint = new THREE.Vector3().subVectors(point, camera.position).normalize();
     // Posición inicial: un poco detrás de la cámara en la misma línea (para que se vea venir)
     const start = camera.position.clone().add(dirCamToPoint.clone().multiplyScalar(2.5));
-    // Aseguramos que el start esté fuera de la esfera terrestre (radio=2) con un mínimo
-    if (start.length() < 2.2) {
-      start.copy(dirCamToPoint.clone().multiplyScalar(6));
+    // Aseguramos que el start esté fuera de la esfera terrestre con un margen mínimo
+    if (start.length() < planetRadius + 0.2) {
+      start.copy(dirCamToPoint.clone().multiplyScalar(planetRadius * 3));
     }
   console.log('[simulacion] spawn asteroid', { start: start.toArray(), target: point.toArray() });
   // Escalado de velocidad: convertimos el valor (1-100) a una velocidad en unidades/segundo.
@@ -99,11 +106,38 @@ const Simulacion = () => {
     console.log('Impact at', target, data);
     // Guardamos la posición en coordenadas del mundo
     setLastImpact({ position: target.clone(), data });
-    // Crear cráter: escalado simple basado en masa y velocidad
-    const masa = data?.masa || 1000;
-    const vel = data?.speed || 1;
-    // Radio base: masa^(1/6) * factor velocidad
-    const radius = Math.min(0.9, Math.max(0.12, Math.cbrt(Math.sqrt(masa)) * 0.02 * (0.6 + vel)));
+  // Crear cráter: estimación basada en energía cinética y escala física
+  const masa = data?.masa || 1000; // kg
+  const speedScene = data?.speed || 1; // velocidad en unidades de escena (0.2..2.0 aprox)
+  // Mapear speedScene a una velocidad realista en km/s (ej. 11..70 km/s)
+  const minKmS = 11;
+  const maxKmS = 70;
+  const km_s = minKmS + ((speedScene - 0.2) / 1.8) * (maxKmS - minKmS);
+  const clamped_km_s = Math.max(minKmS, Math.min(maxKmS, km_s));
+  const v_m_s = clamped_km_s * 1000; // m/s
+  // Energía cinética (J)
+  const energyJ = 0.5 * masa * Math.pow(v_m_s, 2);
+  // Estimación empírica del diámetro del cráter (transient) en metros
+  // usamos una ley de potencia: D_t (m) ~= C * E^(1/3.4). C elegido para producir diámetros razonables.
+  const craterCoeff = 0.032;
+  const D_t_m = craterCoeff * Math.pow(energyJ, 1 / 3.4);
+  const finalDiameter_m = D_t_m * 1.3; // factor para pasar a diámetro final aproximado
+  // Convertir diámetro (m) a unidades de escena (1 unidad = KM_PER_UNIT km)
+  const diameter_km = finalDiameter_m / 1000.0;
+  const radiusUnits = (diameter_km / KM_PER_UNIT) / 2.0;
+  // Ajustes visuales: aumentar el mínimo visible y aplicar un factor para cráteres pequeños
+  // Escalado visual ajustado: los cráteres físicamente correctos (metros) se vuelven invisibles
+  // a la escala planeta (~6.371 u). Exageramos para fines educativos.
+  const visualScaleFactor = 10.0; // antes 1.6 -> multiplicamos para hacerlos claramente visibles
+  const minRadiusUnits = Math.max(planetRadius * 0.005, 0.03); // antes 0.0004*R -> ahora ~0.5% del radio o 0.03 u (~30 km)
+  const maxRadiusUnits = planetRadius * 0.28; // permitir cráteres grandes (antes 0.18)
+  const radiusRaw = Math.max(minRadiusUnits, Math.min(maxRadiusUnits, radiusUnits));
+  const radius = radiusRaw * visualScaleFactor;
+  console.log('[simulacion] crater sizing', {
+    masa, v_m_s, energyJ: Math.round(energyJ), D_t_m: Math.round(D_t_m), finalDiameter_m: Math.round(finalDiameter_m),
+    diameter_km: diameter_km.toFixed(2), radiusUnitsRaw: radiusUnits.toExponential(3),
+    radiusClamped: radiusRaw.toFixed(5), radiusVisual: radius.toFixed(5)
+  });
     // Usar la posición exacta enviada por el asteroide (impacto real)
     let finalPos = target.clone();
     // Convertir la posición de mundo a coordenadas locales del mesh de la Tierra
@@ -118,8 +152,7 @@ const Simulacion = () => {
       console.warn('[simulacion] world/local conversion failed:', err);
     }
     // Si la posición está demasiado lejos del radio esperado, proyectamos al radio para evitar errores
-    const planetRadius = 2;
-    const planetOffsetY = -0.4;
+  // (note: planetRadius/planetOffsetY defined in parent scope)
     const rel = finalPos.clone().sub(new THREE.Vector3(0, planetOffsetY, 0));
     if (rel.length() > planetRadius + 0.02) {
       // fallback: proyectar al radio del planeta manteniendo el centro desplazado
@@ -137,15 +170,28 @@ const Simulacion = () => {
     const t = data?.tipo || params.tipo || 'Roca';
     if (t === 'Hierro') colorScheme = 'gris';
     else if (t === 'Mixto') colorScheme = 'amarillo';
-    const crater = { id: Date.now(), position: finalPos, radius, depth: radius * 0.25, colorScheme };
+  const crater = { id: Date.now(), position: finalPos, radius, depth: radius * 0.25, colorScheme };
     setCraters(c => [...c, crater]);
     setAsteroids([]);
     setFreezeRotation(true); // detener rotación de la Tierra
+    // Debug helper: si está activo, añadir un marcador temporal en la escena para ver el punto de impacto
+    if (showHelpers) {
+      const markerId = `m-${Date.now()}`;
+      const marker = { id: markerId, position: finalPos.clone(), ttl: Date.now() + 3000 };
+      // guardamos como un cráter temporal usando radius muy pequeño pero distinto color
+      setCraters(c => [...c, { id: markerId, position: finalPos.clone(), radius: Math.max(radius*0.3, 0.01), depth: 0, colorScheme: 'amarillo', _temporary: true }]);
+      // limpiamos el marcador después de 3s
+      setTimeout(() => {
+        setCraters(c => c.filter(x => x.id !== markerId));
+      }, 3000);
+    }
     // Calcular energía y radios (para HUD informativo)
-    const masaForCalc = data?.masa || 1000; // kg
-    const velocidadForCalc = (data?.speed || 1) * 1000; // convertir a m/s aproximado
-    const energyJ = 0.5 * masaForCalc * Math.pow(velocidadForCalc, 2);
-    const kilotons = energyJ / (4.184 * Math.pow(10, 12));
+  // Reusar energyJ de arriba (calculado con masa y velocidad reales)
+  // Si por alguna razón no existe, recálculamos
+  const masaForCalc = data?.masa || 1000; // kg
+  const velocidadForCalc = clamped_km_s * 1000; // m/s usado arriba
+  const energyJ_forHUD = typeof energyJ !== 'undefined' ? energyJ : 0.5 * masaForCalc * Math.pow(velocidadForCalc, 2);
+  const kilotons = energyJ_forHUD / (4.184 * Math.pow(10, 12));
     // radios simplificados (km)
     const total = Math.pow(kilotons, 0.33) * 0.5;
     const moderate = Math.pow(kilotons, 0.33) * 1.5;
@@ -254,7 +300,7 @@ const Simulacion = () => {
 
       <div style={{ position: "absolute", inset: 0, zIndex: 10 }}>
         <Canvas camera={{ position: [0, 1.2, 6], fov: 60 }}>
-          <Earth earthRef={earthRef} onPointerDown={handleEarthPointerDown} paused={freezeRotation} craters={craters} />
+          <Earth earthRef={earthRef} onPointerDown={handleEarthPointerDown} paused={freezeRotation} craters={craters} planetRadius={planetRadius} planetOffsetY={planetOffsetY} />
 
           {asteroids.map(a => (
             <Asteroid

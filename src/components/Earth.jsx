@@ -7,7 +7,7 @@ import earthTexture from '../assets/earth.jpg';
 import Crater from './Crater';
 
 // craters: array de { id, position: THREE.Vector3, radius, depth }
-export default function Earth({ earthRef, onPointerDown, paused=false, craters=[] }) {
+export default function Earth({ earthRef, onPointerDown, paused=false, craters=[], planetRadius=2, planetOffsetY=-0.4 }) {
   const mesh = earthRef || useRef();
 
   useFrame((_, delta) => {
@@ -25,8 +25,8 @@ export default function Earth({ earthRef, onPointerDown, paused=false, craters=[
   <directionalLight position={[5, 3, 5]} intensity={0.9} />
   {/* Luz puntual suave para acentuar iluminación lateral */}
   <pointLight position={[10, 10, 10]} intensity={0.6} />
-      <mesh ref={mesh} position={[0, -0.4, 0]} rotation={[0, 0, 0]} onPointerDown={onPointerDown}>
-        <sphereGeometry args={[2, 64, 64]} />
+      <mesh ref={mesh} position={[0, planetOffsetY, 0]} rotation={[0, 0, 0]} onPointerDown={onPointerDown}>
+        <sphereGeometry args={[planetRadius, 64, 64]} />
         <meshStandardMaterial
           map={useLoader(TextureLoader, earthTexture)}
           metalness={0.03}
@@ -44,7 +44,7 @@ export default function Earth({ earthRef, onPointerDown, paused=false, craters=[
             // si falla, mantener la posición tal cual (fallback)
             // console.warn('[Earth] worldToLocal failed', err)
           }
-          return <Crater key={c.id} localPosition={localPos} radius={c.radius} depth={c.depth} colorScheme={c.colorScheme || 'rojo'} planetRadius={2} />
+          return <Crater key={c.id} localPosition={localPos} radius={c.radius} depth={c.depth} colorScheme={c.colorScheme || 'rojo'} planetRadius={planetRadius} planetOffsetY={planetOffsetY} />
         })}
       </mesh>
       <OrbitControls enableZoom={true} />

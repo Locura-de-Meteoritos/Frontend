@@ -1,65 +1,80 @@
 import * as THREE from 'three'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
+import { useLoader } from '@react-three/fiber'
+import { TextureLoader } from 'three'
+import craterTexSrc from '../assets/crater.png'
 
 /*
   Componente Crater
   Props:
-    position: THREE.Vector3 (dirección desde el centro de la Tierra al impacto)
-    radius: número (radio visual del cráter)
+    localPosition: THREE.Vector3 (posición en coordenadas locales del mesh de la Tierra) -- recomendado
+    position: THREE.Vector3 (posición en world space)
+    radius: número (radio visual del cráter, en unidades de escena)
     depth: número (no se usa para geometría aún, reservado para mejoras)
-    colorScheme: 'rojo' | 'amarillo'
+    planetRadius: número (radio de la Tierra en unidades de escena)
+    planetOffsetY: número (offset Y del mesh de la Tierra en unidades de escena)
 */
-export default function Crater({ localPosition, position, radius, depth=0.05, colorScheme='rojo', planetRadius=2 }) {
-  // Soportamos dos modos:
-  // - si `localPosition` está presente, asumimos que es la posición del cráter en coordenadas locales del mesh de la Tierra (recomendado)
-  // - si solo `position` (world) está presente, calculamos como antes
+export default function Crater({ localPosition, position, radius, depth=0.05, planetRadius=2, planetOffsetY=-0.4 }) {
   const useLocal = !!localPosition
   const loc = useLocal ? localPosition.clone() : null
   if (!useLocal && !position) return null
 
-  // Centro del planeta en espacio local del mesh = (0,0,0)
-  // Si tenemos `localPosition`, trabajamos en espacio local: la normal es localPosition.normalized()
-  const adjusted = useLocal ? loc.clone() : position.clone().sub(new THREE.Vector3(0, -0.4, 0))
-  // Normal desde el centro del planeta hacia el punto de impacto (en el mismo espacio)
+  // Si tenemos coords locales, trabajamos en espacio local del mesh (recomendado)
+  const adjusted = useLocal ? loc.clone() : position.clone().sub(new THREE.Vector3(0, planetOffsetY, 0))
   const normal = adjusted.clone().normalize()
   const quat = new THREE.Quaternion()
-  // Alineamos el eje Z local del grupo con la normal de la superficie
   quat.setFromUnitVectors(new THREE.Vector3(0,0,1), normal)
   const euler = new THREE.Euler().setFromQuaternion(quat)
-  const palette = colorScheme === 'amarillo' ? {
-    rim: '#eab308',       // amarillo dorado
-    inner: '#facc15',     // interior más claro
-    halo: '#fde047',      // halo suave
-    emissive: '#f59e0b'
-  } : {
-    rim: '#b91c1c',       // rojo oscuro
-    inner: '#dc2626',     // rojo medio
-    halo: '#f87171',      // halo rojizo
-    emissive: '#ef4444'
-  }
 
-  const ringScale = radius * 1.6
+  // Escala base: radius representa el radio visual. La textura es cuadrada; hacemos un plano diámetro x diámetro
+  const diameter = radius * 2
 
-  // Si estamos en espacio local, la posición local en la superficie es normal * planetRadius
-  const localSurfacePos = normal.clone().multiplyScalar(planetRadius)
+  // Evitar z-fighting: colocar el cráter ligeramente por encima de la superficie, luego hundir un poco el plano
+  const outwardOffset = Math.max(radius * 0.02, planetRadius * 0.0005)
+  const localSurfacePos = normal.clone().multiplyScalar(planetRadius + outwardOffset)
+
+  // Cargar textura del cráter (PNG con alpha)
+  const craterTexture = useLoader(TextureLoader, craterTexSrc)
+  craterTexture.anisotropy = 8
+  craterTexture.wrapS = craterTexture.wrapT = THREE.ClampToEdgeWrapping
+
+  const logged = useRef(false)
+  useEffect(() => {
+    if (!logged.current) {
+      try {
+        console.log('[Crater] mount', {
+          radius,
+          useLocal,
+          hasLocal: !!localPosition,
+          adjustedLen: adjusted.length().toFixed(4),
+          planetRadius,
+          outwardOffset,
+        })
+      } catch (e) {}
+      logged.current = true
+    }
+  }, [radius, useLocal, localPosition, adjusted, planetRadius])
+
+  if (radius <= 0) return null
 
   return (
-    // Cuando el cráter se renderice como hijo del mesh de la Tierra, usamos coords locales
     <group position={localSurfacePos} rotation={euler}>
-      {/* Borde del cráter */}
-      <mesh>
-        <ringGeometry args={[radius * 0.9, radius * 1.2, 40]} />
-        <meshStandardMaterial color={palette.rim} emissive={palette.emissive} emissiveIntensity={0.45} roughness={0.75} metalness={0.08} side={THREE.DoubleSide} />
+      {/* Plano texturizado del cráter */}
+      <mesh position={[0,0,-Math.max(0.004, outwardOffset * 0.35)]} frustumCulled={false}> 
+        <planeGeometry args={[diameter, diameter]} />
+        <meshStandardMaterial
+          map={craterTexture}
+          transparent
+          alphaTest={0.15}
+          depthWrite={false}
+          roughness={0.85}
+          metalness={0.05}
+        />
       </mesh>
-      {/* Interior */}
-      <mesh position={[0,0,-0.012]}> 
-        <circleGeometry args={[radius*0.9, 40]} />
-        <meshStandardMaterial color={palette.inner} roughness={0.9} metalness={0.05} />
-      </mesh>
-      {/* Halo de eyección semitransparente */}
-      <mesh scale={[ringScale, ringScale, ringScale]} position={[0,0,0.007]}> 
-        <ringGeometry args={[radius * 1.25, radius * 1.55, 64]} />
-        <meshBasicMaterial color={palette.halo} opacity={0.35} transparent />
+      {/* Halo simple opcional (mantiene algo del look anterior, escalado ligero) */}
+      <mesh position={[0,0,0.002]} scale={[1,1,1]}> 
+        <ringGeometry args={[radius * 1.05, radius * 1.38, 48]} />
+        <meshBasicMaterial color="#ffffff" opacity={0.28} transparent />
       </mesh>
     </group>
   )
