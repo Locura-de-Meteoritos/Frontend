@@ -17,7 +17,7 @@ export default function Earth() {
     <>
       <ambientLight intensity={0.6} />
       <pointLight position={[10, 10, 10]} intensity={0.8} />
-      <mesh ref={mesh} rotation={[0, 0, 0]}>
+      <mesh ref={mesh} position={[0, -0.4, 0]} rotation={[0, 0, 0]}>
         <sphereGeometry args={[2, 64, 64]} />
         <meshStandardMaterial map={texture} />
       </mesh>
