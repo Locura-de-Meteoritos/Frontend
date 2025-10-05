@@ -3,8 +3,8 @@ const Footer = () => {
     <footer className="glass border-t border-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-4">Locura de Meteoritos</h3>
-          <p className="text-gray-200 mb-6">Explorando el universo, un meteorito a la vez.</p>
+          <h3 className="text-lg font-semibold text-white mb-4">Meteor Madness</h3>
+          <p className="text-gray-200 mb-6">Exploring the universe, one meteorite at a time.</p>
           <div className="flex justify-center space-x-6">
             
             <a href="https://github.com/Locura-de-Meteoritos" className="text-gray-300 hover:text-white transition-colors">
@@ -15,7 +15,7 @@ const Footer = () => {
             </a>
           </div>
           <p className="text-gray-400 text-sm mt-6">
-            © 2025 Locura de Meteoritos. Todos los derechos reservados.
+            © 2025 Meteor Madness. All rights reserved.
           </p>
         </div>
       </div>
