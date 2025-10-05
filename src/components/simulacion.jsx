@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import Earth from "./Earth";
+import Earth3D from "./Earth3D";
 import Background from "./Background";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -543,7 +543,7 @@ const Simulacion = () => {
 
       <div style={{ position: "absolute", inset: 0, zIndex: 10 }}>
         <Canvas camera={{ position: [0, 1.2, 6], fov: 60 }}>
-          <Earth earthRef={earthRef} onPointerDown={handleEarthPointerDown} paused={freezeRotation} craters={craters} planetRadius={planetRadius} planetOffsetY={planetOffsetY} />
+          <Earth3D earthRef={earthRef} onPointerDown={handleEarthPointerDown} paused={freezeRotation} craters={craters} planetRadius={planetRadius} planetOffsetY={planetOffsetY} />
 
           {asteroids.map(a => (
             <Asteroid
