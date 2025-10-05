@@ -9,3 +9,49 @@ body {
   --bg-color: #030014;
   --text-on-bg: #ffffff;
 }
+
+/* Estilos para el slider de mitigación */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #51cf66;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #40c057;
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #51cf66;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #40c057;
+  transform: scale(1.2);
+}
+
+/* Fix para z-index de Leaflet */
+.leaflet-pane {
+  z-index: 400 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000 !important;
+}
+
+.leaflet-control {
+  z-index: 1000 !important;
+}
