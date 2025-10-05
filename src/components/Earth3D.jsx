@@ -4,37 +4,33 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 
 // ============================================================================
-// HOOK PERSONALIZADO: Carga de texturas reales de la NASA (opcional)
+// HOOK PERSONALIZADO: Carga de texturas de la Tierra (4K)
+// Fuente: GitHub (webgl-earth) - Sin problemas CORS
 // ============================================================================
-function useEarthTextures(useRealTextures = false) {
+function useEarthTextures() {
   const [textures, setTextures] = useState({});
-  const [loading, setLoading] = useState(useRealTextures);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!useRealTextures) {
-      setLoading(false);
-      return;
-    }
-
     const loadTextures = async () => {
       try {
         const loader = new THREE.TextureLoader();
         
-        console.log('🌍 Cargando texturas de la NASA...');
+        console.log('🌍 Cargando texturas de la Tierra...');
         
-        // Texturas de alta calidad de la NASA
+        // Texturas de alta calidad sin problemas de CORS
         const [dayTexture, nightTexture, normalTexture, cloudsTexture] = await Promise.all([
           loader.loadAsync(
-            'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x5400x2700.jpg'
+            'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg'
           ).catch(() => null),
           loader.loadAsync(
-            'https://eoimages.gsfc.nasa.gov/images/imagerecords/79000/79765/dnb_land_ocean_ice.2012.3600x1800.jpg'
+            'https://raw.githubusercontent.com/turban/webgl-earth/master/images/5_night_4k.jpg'
           ).catch(() => null),
           loader.loadAsync(
-            'https://assets.cesium.com/29873/20200426T025716/1_World_Normal_20200426.jpg'
+            'https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg'
           ).catch(() => null),
           loader.loadAsync(
-            'https://assets.cesium.com/29873/20200426T025716/1_World_Clouds_20200426.jpg'
+            'https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png'
           ).catch(() => null)
         ]);
 
@@ -44,7 +40,14 @@ function useEarthTextures(useRealTextures = false) {
           normalTexture && (normalTexture.wrapS = normalTexture.wrapT = THREE.RepeatWrapping);
           cloudsTexture && (cloudsTexture.wrapS = cloudsTexture.wrapT = THREE.RepeatWrapping);
           
-          console.log('✅ Texturas cargadas exitosamente');
+          console.log('✅ Texturas cargadas exitosamente:', {
+            day: !!dayTexture,
+            night: !!nightTexture,
+            normal: !!normalTexture,
+            clouds: !!cloudsTexture
+          });
+        } else {
+          console.warn('⚠️ No se pudo cargar la textura principal de la Tierra');
         }
 
         setTextures({
@@ -55,38 +58,33 @@ function useEarthTextures(useRealTextures = false) {
         });
         setLoading(false);
       } catch (error) {
-        console.error('⚠️ Error cargando texturas, usando modo procedimental:', error);
+        console.error('⚠️ Error cargando texturas:', error);
         setLoading(false);
       }
     };
 
     loadTextures();
-  }, [useRealTextures]);
+  }, []);
 
   return { textures, loading };
 }
 
 // ============================================================================
-// MODELO 3D ULTRA-REALISTA DE LA TIERRA
+// MODELO 3D ULTRA-REALISTA DE LA TIERRA CON TEXTURAS 4K
+// Texturas de alta resolución sin problemas de CORS
 // ============================================================================
-// Sistema híbrido: Texturas NASA + Generación procedimental
-// Iluminación realista, múltiples capas, rotación auténtica
-// ============================================================================
-
 export default function Earth3D({ 
   earthRef, 
-  planetRadius = 100, // Radio en unidades Three.js (100 = escala realista)
+  planetRadius = 100,
   planetOffsetY = -0.4, 
   paused = false, 
   onPointerDown, 
   craters = [],
-  // Configuración avanzada
-  useRealTextures = false, // NUEVO: Usar texturas reales de la NASA
   showAtmosphere = true,
   showClouds = true,
-  earthTilt = 23.5, // Inclinación axial real de la Tierra
-  rotationSpeed = 0.01, // Velocidad de rotación (ajustable)
-  cloudRotationSpeed = 0.008, // Nubes rotan más lento
+  earthTilt = 23.5,
+  rotationSpeed = 0.01,
+  cloudRotationSpeed = 0.008,
   enableAutoRotate = false
 }) {
   const groupRef = useRef();
@@ -94,11 +92,11 @@ export default function Earth3D({
   const atmosphereRef = useRef();
   const earthMeshRef = useRef();
   
-  // Cargar texturas reales (opcional)
-  const { textures, loading } = useEarthTextures(useRealTextures);
+  // Cargar texturas de la NASA
+  const { textures, loading } = useEarthTextures();
 
   // ============================================================================
-  // CONSTRUCCIÓN DEL PLANETA TIERRA - SISTEMA HÍBRIDO
+  // CONSTRUCCIÓN DEL PLANETA TIERRA CON TEXTURAS NASA
   // ============================================================================
   const planetGroup = useRef();
   
@@ -111,399 +109,55 @@ export default function Earth3D({
     group.rotation.z = (earthTilt * Math.PI) / 180;
     
     // ========================================================================
-    // MODO 1: TEXTURAS REALES DE LA NASA
+    // TIERRA CON TEXTURAS REALES (SIN CORS)
     // ========================================================================
-    if (useRealTextures && textures.day) {
-      console.log('🌍 Renderizando con texturas NASA');
-      
-      // Geometría de alta calidad
-      const earthGeo = new THREE.SphereGeometry(planetRadius, 256, 256);
-      
-      // Material con todas las texturas NASA
-      const earthMat = new THREE.MeshPhongMaterial({
-        map: textures.day, // Color diurno
-        specularMap: textures.night, // Luces nocturnas como specular
-        specular: new THREE.Color(0x333333),
-        shininess: 10,
-        normalMap: textures.normal, // Normal map para relieve
-        normalScale: new THREE.Vector2(0.85, 0.85), // Intensidad del relieve
-        bumpMap: textures.normal, // Usar también como bump map
-        bumpScale: 0.02
-      });
-      
-      const earthMesh = new THREE.Mesh(earthGeo, earthMat);
-      earthMesh.position.set(0, planetOffsetY, 0);
-      earthMesh.name = 'EarthNASA';
-      earthMeshRef.current = earthMesh;
-      group.add(earthMesh);
-      
-      // Nubes con textura real
-      if (showClouds && textures.clouds) {
-        const cloudsGeo = new THREE.SphereGeometry(planetRadius * 1.01, 128, 128);
-        const cloudsMat = new THREE.MeshPhongMaterial({
-          map: textures.clouds,
-          transparent: true,
-          opacity: 0.7,
-          depthWrite: false,
-          side: THREE.DoubleSide
-        });
-        
-        const cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
-        cloudsMesh.name = 'CloudsNASA';
-        cloudsMesh.position.set(0, planetOffsetY, 0);
-        cloudsMesh.renderOrder = 999;
-        cloudsRef.current = cloudsMesh;
-        group.add(cloudsMesh);
-      }
-    } 
-    // ========================================================================
-    // MODO 2: GENERACIÓN PROCEDIMENTAL (fallback o predeterminado)
-    // ========================================================================
-    else {
-      console.log('🎨 Renderizando con generación procedimental');
-      
-      // ====================================================================
-      // FUNCIONES DE RUIDO PROCEDIMENTAL MEJORADAS
-      // ====================================================================
+    console.log('🌍 Renderizando Tierra con texturas de alta calidad');
     
-      // Ruido 3D de alta calidad (Perlin-like)
-      const noise3D = (x, y, z, seed = 0) => {
-      const X = Math.floor(x) & 255;
-      const Y = Math.floor(y) & 255;
-      const Z = Math.floor(z) & 255;
-      x -= Math.floor(x);
-      y -= Math.floor(y);
-      z -= Math.floor(z);
-      
-      // Smoothstep para interpolación suave
-      const u = x * x * x * (x * (x * 6 - 15) + 10);
-      const v = y * y * y * (y * (y * 6 - 15) + 10);
-      const w = z * z * z * (z * (z * 6 - 15) + 10);
-      
-      const hash = (i, j, k) => {
-        return Math.abs(Math.sin((i * 127.1 + j * 311.7 + k * 74.7 + seed) * 43758.5453) % 1);
-      };
-      
-      const a = hash(X, Y, Z);
-      const b = hash(X + 1, Y, Z);
-      const c = hash(X, Y + 1, Z);
-      const d = hash(X + 1, Y + 1, Z);
-      const e = hash(X, Y, Z + 1);
-      const f = hash(X + 1, Y, Z + 1);
-      const g = hash(X, Y + 1, Z + 1);
-      const h = hash(X + 1, Y + 1, Z + 1);
-      
-      const k0 = a + u * (b - a);
-      const k1 = c + u * (d - c);
-      const k2 = e + u * (f - e);
-      const k3 = g + u * (h - g);
-      const k4 = k0 + v * (k1 - k0);
-      const k5 = k2 + v * (k3 - k2);
-      
-      return k4 + w * (k5 - k4);
-    };
-
-    // FBM (Fractal Brownian Motion) de 8 octavas para máximo detalle
-    const fbm = (x, y, z, octaves = 8) => {
-      let value = 0;
-      let amplitude = 1;
-      let frequency = 1;
-      let maxValue = 0;
-      
-      for (let i = 0; i < octaves; i++) {
-        value += noise3D(x * frequency, y * frequency, z * frequency, i) * amplitude;
-        maxValue += amplitude;
-        amplitude *= 0.5;
-        frequency *= 2.1; // Lacunaridad ligeramente mayor para más detalle
-      }
-      
-      return value / maxValue;
-    };
+    // Geometría de alta calidad
+    const earthGeo = new THREE.SphereGeometry(planetRadius, 256, 256);
     
-    // ========================================================================
-    // CAPA 1: OCÉANOS (Base azul brillante)
-    // ========================================================================
-    const oceanGeo = new THREE.SphereGeometry(planetRadius, 256, 256);
-    const oceanMat = new THREE.MeshStandardMaterial({ 
-      color: 0x0a4d8c, // Azul océano profundo
-      metalness: 0.4, // Agua tiene cierta reflectividad
-      roughness: 0.1, // Océanos son muy suaves
-      emissive: 0x001a33,
-      emissiveIntensity: 0.05
-    });
-    const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
-    oceanMesh.position.set(0, planetOffsetY, 0);
-    oceanMesh.name = 'EarthOcean';
-    group.add(oceanMesh);
-
-    // ========================================================================
-    // CAPA 2: CONTINENTES con Bump Mapping y Color Mapping
-    // ========================================================================
-    const landGeo = new THREE.SphereGeometry(planetRadius, 512, 512); // Alta resolución
-    const pos = landGeo.attributes.position;
-    const colors = [];
-    const v = new THREE.Vector3();
-    
-    // Arrays para simular bump/normal maps
-    const bumpData = [];
-    
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-      const vNorm = v.clone().normalize();
-      
-      // Latitud y longitud para variación geográfica realista
-      const lat = Math.asin(vNorm.y);
-      const lng = Math.atan2(vNorm.x, vNorm.z);
-      
-      // Múltiples capas de ruido para terreno complejo
-      const continentalScale = fbm(vNorm.x * 1.2, vNorm.y * 1.2, vNorm.z * 1.2, 4);
-      const mountainScale = fbm(vNorm.x * 8, vNorm.y * 8, vNorm.z * 8, 6);
-      const detailScale = fbm(vNorm.x * 20, vNorm.y * 20, vNorm.z * 20, 8);
-      
-      // Combinar escalas para elevación final
-      const elevation = continentalScale * 0.6 + mountainScale * 0.3 + detailScale * 0.1;
-      
-      // Umbral tierra/agua más realista
-      const isLand = elevation > 0.48;
-      
-      if (isLand) {
-        // ====================================================================
-        // SISTEMA DE COLORIZACIÓN GEOGRÁFICA REALISTA
-        // ====================================================================
-        const terrainHeight = elevation - 0.48;
-        const heightFactor = 1 + terrainHeight * 0.015; // Bump sutil pero visible
-        
-        // Aplicar bump map (relieve)
-        pos.setXYZ(i, v.x * heightFactor, v.y * heightFactor, v.z * heightFactor);
-        bumpData.push(terrainHeight);
-        
-        // Variación por latitud (zonas climáticas)
-        const absLat = Math.abs(lat);
-        const isPolar = absLat > 1.3; // >75° Norte/Sur
-        const isTemperate = absLat > 0.7 && absLat <= 1.3; // 40-75°
-        const isTropical = absLat <= 0.7; // 0-40°
-        
-        let r, g, b;
-        
-        if (isPolar) {
-          // ====== REGIONES POLARES: Hielo y tundra ======
-          r = 0.85 + terrainHeight * 0.15;
-          g = 0.90 + terrainHeight * 0.1;
-          b = 0.95;
-        } else if (terrainHeight > 0.3) {
-          // ====== MONTAÑAS ALTAS: Rocas y nieve ======
-          const snowLine = terrainHeight > 0.4 ? 1 : 0;
-          r = 0.5 + snowLine * 0.4 + detailScale * 0.1;
-          g = 0.45 + snowLine * 0.45 + detailScale * 0.1;
-          b = 0.4 + snowLine * 0.55;
-        } else if (isTemperate) {
-          // ====== ZONAS TEMPLADAS: Bosques, praderas ======
-          const forestDensity = detailScale;
-          r = 0.25 + forestDensity * 0.3 + terrainHeight * 0.2;
-          g = 0.45 + forestDensity * 0.2 + terrainHeight * 0.1;
-          b = 0.15 + forestDensity * 0.1;
-        } else if (isTropical) {
-          // ====== ZONAS TROPICALES: Selvas, desiertos, sabanas ======
-          const humidity = noise3D(vNorm.x * 15, vNorm.y * 15, vNorm.z * 15, 99);
-          
-          if (humidity > 0.6) {
-            // Selva tropical (verde intenso)
-            r = 0.1 + detailScale * 0.15;
-            g = 0.4 + detailScale * 0.2;
-            b = 0.1;
-          } else if (humidity < 0.35) {
-            // Desierto (arena, beige)
-            r = 0.76 + detailScale * 0.1;
-            g = 0.7 + detailScale * 0.05;
-            b = 0.5 + detailScale * 0.1;
-          } else {
-            // Sabana (verde-amarillento)
-            r = 0.55 + detailScale * 0.2;
-            g = 0.6 + detailScale * 0.15;
-            b = 0.3;
-          }
-        } else {
-          // ====== TIERRAS BAJAS COSTERAS ======
-          r = 0.35 + terrainHeight + detailScale * 0.1;
-          g = 0.5 + terrainHeight * 0.5;
-          b = 0.25;
-        }
-        
-        // Variación por detalle fino
-        r += (detailScale - 0.5) * 0.05;
-        g += (detailScale - 0.5) * 0.05;
-        b += (detailScale - 0.5) * 0.05;
-        
-        // Clamp valores
-        r = Math.max(0, Math.min(1, r));
-        g = Math.max(0, Math.min(1, g));
-        b = Math.max(0, Math.min(1, b));
-        
-        colors.push(r, g, b);
-      } else {
-        // ====== OCÉANOS: Mantener superficie base ======
-        pos.setXYZ(i, v.x, v.y, v.z);
-        bumpData.push(0);
-        
-        // Variación de color oceánico (profundidad simulada)
-        const depth = 0.48 - elevation;
-        const oceanBlue = 0.3 + depth * 0.4;
-        colors.push(0, oceanBlue * 0.8, oceanBlue);
-      }
-    }
-    
-    landGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    landGeo.computeVertexNormals(); // Normal map automático
-    
-    const landMat = new THREE.MeshStandardMaterial({ 
-      vertexColors: true,
-      metalness: 0.02, // Tierra es muy mate
-      roughness: 0.9, // Alta rugosidad para continentes
-      flatShading: false,
-      transparent: false
+    // Material con todas las texturas NASA
+    const earthMat = new THREE.MeshPhongMaterial({
+      map: textures.day, // Color diurno
+      specularMap: textures.night, // Luces nocturnas como specular
+      specular: new THREE.Color(0x333333),
+      shininess: 10,
+      normalMap: textures.normal, // Normal map para relieve
+      normalScale: new THREE.Vector2(0.85, 0.85), // Intensidad del relieve
+      bumpMap: textures.normal, // Usar también como bump map
+      bumpScale: 0.02
     });
     
-    const landMesh = new THREE.Mesh(landGeo, landMat);
-    landMesh.position.set(0, planetOffsetY, 0);
-    landMesh.name = 'EarthLand';
-    group.add(landMesh);
-
+    const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    earthMesh.position.set(0, planetOffsetY, 0);
+    earthMesh.name = 'EarthNASA';
+    earthMeshRef.current = earthMesh;
+    group.add(earthMesh);
+    
     // ========================================================================
-    // CAPA 3: NUBES con Alpha Mapping y rotación independiente
+    // NUBES CON TEXTURA REAL 4K
     // ========================================================================
-    if (showClouds) {
-      const cloudsGeo = new THREE.SphereGeometry(planetRadius * 1.012, 256, 256);
-      const cloudsMat = new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uOpacity: { value: 0.65 }
-        },
-        vertexShader: `
-          varying vec3 vPos;
-          varying vec3 vNormal;
-          varying vec2 vUv;
-          
-          void main() {
-            vPos = normalize(position);
-            vNormal = normalize(normalMatrix * normal);
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          varying vec3 vPos;
-          varying vec3 vNormal;
-          varying vec2 vUv;
-          uniform float uTime;
-          uniform float uOpacity;
-          
-          // ============ FUNCIONES DE RUIDO PARA NUBES ============
-          
-          float hash(vec3 p) {
-            return fract(sin(dot(p, vec3(17.1, 113.5, 41.3))) * 43758.5453);
-          }
-          
-          float noise3D(vec3 p) {
-            vec3 i = floor(p);
-            vec3 f = fract(p);
-            
-            // Quintic interpolation
-            f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
-            
-            float n = mix(
-              mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
-                  mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
-              mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
-                  mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y),
-              f.z
-            );
-            return n;
-          }
-          
-          // FBM de 6 octavas para nubes detalladas
-          float fbm(vec3 p) {
-            float value = 0.0;
-            float amplitude = 0.5;
-            float frequency = 1.0;
-            
-            for(int i = 0; i < 6; i++) {
-              value += amplitude * noise3D(p * frequency);
-              frequency *= 2.3;
-              amplitude *= 0.4;
-            }
-            return value;
-          }
-          
-          // Patrón de nubes tipo cúmulo
-          float cloudPattern(vec3 p) {
-            float clouds = fbm(p * 2.5);
-            float detail = fbm(p * 8.0);
-            
-            // Combinar escalas
-            clouds = clouds * 0.7 + detail * 0.3;
-            
-            // Turbulencia adicional
-            float turb = fbm(p * 15.0 + vec3(uTime * 0.1));
-            clouds += turb * 0.1;
-            
-            return clouds;
-          }
-          
-          void main() {
-            // Coordenadas esféricas con deriva lenta
-            vec3 p = vPos * 3.0;
-            p.x += uTime * 0.03; // Deriva este-oeste
-            p.y += sin(uTime * 0.02) * 0.1; // Ligera oscilación
-            
-            // Generar patrón de nubes
-            float clouds = cloudPattern(p);
-            
-            // Suavizar bordes (más nubes en ecuador, menos en polos)
-            float latitudeFactor = 1.0 - abs(vPos.y) * 0.3;
-            clouds *= latitudeFactor;
-            
-            // Threshold y suavizado
-            clouds = smoothstep(0.4, 0.7, clouds);
-            
-            // Efecto fresnel (nubes más visibles en los bordes)
-            vec3 viewDir = normalize(cameraPosition - vPos);
-            float fresnel = pow(1.0 - abs(dot(vNormal, viewDir)), 1.5);
-            float edgeFade = mix(1.0, 0.6, fresnel);
-            
-            // Descartar fragmentos muy transparentes
-            if (clouds < 0.08) discard;
-            
-            // Color blanco puro para nubes
-            vec3 cloudColor = vec3(1.0);
-            
-            // Sombras sutiles en nubes densas
-            float shadow = smoothstep(0.5, 0.8, clouds) * 0.15;
-            cloudColor -= vec3(shadow);
-            
-            // Opacidad final con variación
-            float alpha = clouds * uOpacity * edgeFade;
-            
-            gl_FragColor = vec4(cloudColor, alpha);
-          }
-        `,
+    if (showClouds && textures.clouds) {
+      const cloudsGeo = new THREE.SphereGeometry(planetRadius * 1.01, 128, 128);
+      const cloudsMat = new THREE.MeshPhongMaterial({
+        map: textures.clouds,
         transparent: true,
+        opacity: 0.7,
         depthWrite: false,
-        side: THREE.DoubleSide,
-        blending: THREE.NormalBlending
+        side: THREE.DoubleSide
       });
       
       const cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
-      cloudsMesh.name = 'EarthClouds';
+      cloudsMesh.name = 'CloudsNASA';
       cloudsMesh.position.set(0, planetOffsetY, 0);
       cloudsMesh.renderOrder = 999;
       cloudsRef.current = cloudsMesh;
       group.add(cloudsMesh);
-      }
-    } // FIN del bloque else (generación procedimental)
+    }
     
     // ========================================================================
-    // CAPA 4: ATMÓSFERA (Rayleigh Scattering - Glow azul mejorado)
-    // Con viewVector dinámico inspirado en el código NASA
+    // ATMÓSFERA (Rayleigh Scattering - Glow azul mejorado)
+    // Con viewVector dinámico para efectos de luz realistas
     // ========================================================================
     if (showAtmosphere) {
       const atmosphereGeo = new THREE.SphereGeometry(planetRadius * 1.08, 128, 128);
@@ -597,9 +251,8 @@ export default function Earth3D({
         return p ? earthRef.current.getLatLng(p) : null;
       };
       
-      // Método para obtener el mesh de la Tierra
-      earthRef.current.getEarthMesh = () => landMesh;
-      earthRef.current.getOceanMesh = () => oceanMesh;
+      // Método para obtener los meshes de la Tierra
+      earthRef.current.getEarthMesh = () => earthMeshRef.current;
       earthRef.current.getCloudsMesh = () => cloudsRef.current;
       earthRef.current.getAtmosphereMesh = () => atmosphereRef.current;
     }
@@ -624,7 +277,7 @@ export default function Earth3D({
         console.error('Error disposing Earth resources:', e);
       }
     };
-  }, [earthRef, planetRadius, planetOffsetY, showAtmosphere, showClouds, earthTilt, loading, useRealTextures, textures]);
+  }, [earthRef, planetRadius, planetOffsetY, showAtmosphere, showClouds, earthTilt, loading, textures]);
 
   // ============================================================================
   // ANIMACIÓN: Rotación y actualización de shaders con viewVector dinámico
@@ -640,15 +293,9 @@ export default function Earth3D({
     // Rotación independiente de las nubes (más lenta)
     if (cloudsRef.current) {
       cloudsRef.current.rotation.y += cloudRotationSpeed * delta;
-      
-      // Actualizar uniform de tiempo para animación de nubes (solo modo procedimental)
-      const mat = cloudsRef.current.material;
-      if (mat.uniforms && mat.uniforms.uTime) {
-        mat.uniforms.uTime.value += delta;
-      }
     }
     
-    // Actualizar viewVector de la atmósfera (inspirado en código NASA)
+    // Actualizar viewVector de la atmósfera
     if (atmosphereRef.current && state.camera) {
       const mat = atmosphereRef.current.material;
       if (mat.uniforms && mat.uniforms.viewVector) {
@@ -669,9 +316,9 @@ export default function Earth3D({
   });
 
   // ============================================================================
-  // PLACEHOLDER: Mientras cargan las texturas de la NASA
+  // PLACEHOLDER: Mientras cargan las texturas 4K
   // ============================================================================
-  if (loading && useRealTextures) {
+  if (loading) {
     return (
       <group ref={groupRef}>
         {/* Esfera simple de carga */}
@@ -685,7 +332,6 @@ export default function Earth3D({
           />
         </mesh>
         
-        {/* Texto de carga (opcional, usando sprite) */}
         <ambientLight intensity={0.5} />
         <pointLight position={[planetRadius * 2, planetRadius, planetRadius * 2]} intensity={1} />
         
