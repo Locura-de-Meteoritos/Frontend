@@ -14,17 +14,17 @@ const Body = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-            Vive una simulación interactiva
+            Experience an interactive simulation
             <br />
-            <span className="text-white">de impactos de asteroides y aprende con datos reales</span>
+            <span className="text-white">of asteroid impacts and learn with real data</span>
           </h1>
           <p className="text-white text-gray-300 mb-6 max-w-2xl mx-auto leading-relaxed">
-            Experimenta cómo distintos meteoritos afectan la Tierra: ajusta tamaño, velocidad y punto de impacto,
-            y observa las consecuencias en tiempo real. Esta experiencia combina visualización 3D con cálculos físicos
-            para ofrecer una aproximación educativa y divertida.
+            Experiment how different meteorites affect Earth: adjust size, velocity and impact point,
+            and observe the consequences in real-time. This experience combines 3D visualization with physical calculations
+            to offer an educational and fun approach.
           </p>
 
-          <p className="text-sm text-gray-400 mb-6 max-w-2xl mx-auto">Pulsa "Empezar simulación" para elegir un asteroide y su punto de impacto.</p>
+          <p className="text-sm text-gray-400 mb-6 max-w-2xl mx-auto">Press "Start simulation" to choose an asteroid and its impact point.</p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
@@ -35,7 +35,7 @@ const Body = () => {
                          transition-all duration-300 ease-out"
               onClick={handleSimulationClick}
             >
-              Empezar simulación
+              Start simulation
             </button>
 
             {/* Nuevo botón para navegar a la página del Sistema Solar */}
@@ -47,7 +47,7 @@ const Body = () => {
                          transition-all duration-300 ease-out"
               onClick={handleSistemaSolarClick}
             >
-              Ver Sistema Solar
+              View Solar System
             </button>
           </div>
         </div>

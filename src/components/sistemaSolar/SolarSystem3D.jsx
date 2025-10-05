@@ -40,7 +40,7 @@ const SolarSystemScene = ({ asteroids }) => {
   const earthRef = useRef();
 
   return (
-    <Canvas camera={{ position: [0, 15, 25], fov: 65 }}>
+    <Canvas camera={{ position: [0, 25, 45], fov: 75 }}>
       {/* Luz ambiente más intensa para iluminar todo el sistema */}
       <ambientLight intensity={0.8} />
       
@@ -58,7 +58,7 @@ const SolarSystemScene = ({ asteroids }) => {
         <Planets earthRef={earthRef} />
         
         {/* Cinturón de asteroides decorativo (entre Marte y Júpiter) */}
-        <AsteroidBelt count={150} innerRadius={8.5} outerRadius={10.5} />
+        <AsteroidBelt count={150} innerRadius={13.5} outerRadius={16.5} />
         
         {/* Asteroides reales de NASA */}
         {asteroids.length > 0 && <Asteroids asteroids={asteroids} />}
@@ -109,13 +109,13 @@ const SolarSystem3D = ({ className = 'w-full h-[600px]' }) => {
     <div className={`${className} relative`}>
       {loading && (
         <div className="absolute top-4 right-4 bg-black/50 text-white px-3 py-2 rounded-lg text-sm backdrop-blur-sm z-10">
-          🛰️ Cargando asteroides...
+          🛰️ Loading asteroids...
         </div>
       )}
       
       {error && !asteroids.length && (
         <div className="absolute top-4 right-4 bg-yellow-500/20 text-yellow-200 px-3 py-2 rounded-lg text-sm backdrop-blur-sm z-10">
-          ⚠️ Usando datos de ejemplo
+          ⚠️ Using sample data
         </div>
       )}
       
@@ -129,7 +129,7 @@ const SolarSystem3D = ({ className = 'w-full h-[600px]' }) => {
                 : 'bg-blue-500/30 hover:bg-blue-500/50 text-white border-blue-400/30'
             }`}
           >
-            {showInfo ? '✕ Cerrar' : `${usingMockData ? '⚡' : '🌠'} ${asteroids.length} Asteroides`}
+            {showInfo ? '✕ Close' : `${usingMockData ? '⚡' : '🌠'} ${asteroids.length} Asteroids`}
           </button>
           
           {showInfo && (

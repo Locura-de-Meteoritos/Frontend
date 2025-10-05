@@ -13,15 +13,22 @@ import uranoMap from '../../assets/urano.jpg';
 import neptunoMap from '../../assets/neptuno.jpg';
 
 // Componente individual de planeta
-function PlanetMesh({ textureMap, size, distance, speed, inclination = 0, name }) {
+function PlanetMesh({ textureMap, size, distance, speed, inclination = 0, name, eccentricity = 0 }) {
   const meshRef = useRef();
   const texture = useLoader(THREE.TextureLoader, textureMap);
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const t = clock.getElapsedTime() * speed;
-      meshRef.current.position.x = Math.cos(t) * distance;
-      meshRef.current.position.z = Math.sin(t) * distance * Math.cos(inclination);
+      
+      // Órbita elíptica: r = a(1 - e²) / (1 + e*cos(θ))
+      const a = distance; // Semi-eje mayor
+      const e = eccentricity; // Excentricidad
+      const theta = t;
+      const r = a * (1 - e * e) / (1 + e * Math.cos(theta));
+      
+      meshRef.current.position.x = Math.cos(theta) * r;
+      meshRef.current.position.z = Math.sin(theta) * r * Math.cos(inclination);
       meshRef.current.rotation.y += 0.01 + speed * 0.005;
     }
   });
@@ -47,8 +54,15 @@ export function Earth({ forwardedRef }) {
   useFrame(({ clock }) => {
     if (forwardedRef.current) {
       const t = clock.getElapsedTime() * 1.0;
-      forwardedRef.current.position.x = Math.cos(t) * 6.5;
-      forwardedRef.current.position.z = Math.sin(t) * 6.5;
+      
+      // Órbita elíptica de la Tierra (excentricidad real: 0.0167)
+      const a = 9.5; // Distancia aumentada
+      const e = 0.017; // Excentricidad muy leve (casi circular)
+      const theta = t;
+      const r = a * (1 - e * e) / (1 + e * Math.cos(theta));
+      
+      forwardedRef.current.position.x = Math.cos(theta) * r;
+      forwardedRef.current.position.z = Math.sin(theta) * r;
       forwardedRef.current.rotation.y += 0.015;
     }
   });
@@ -101,34 +115,37 @@ export function Moon({ earthRef }) {
 export default function Planets({ earthRef }) {
   return (
     <group name="Planetas">
-      {/* Mercurio - el más pequeño de los planetas rocosos */}
+      {/* Mercurio - el más pequeño y cercano al Sol */}
       <PlanetMesh 
         name="Mercurio"
         textureMap={mercurioMap} 
         size={0.18} 
-        distance={3.5} 
+        distance={5.0}  // Más alejado del Sol
         speed={1.6} 
+        eccentricity={0.206}  // Órbita muy elíptica
       />
       
-      {/* Venus - similar a la Tierra en tamaño */}
+      {/* Venus - órbita casi circular */}
       <PlanetMesh 
         name="Venus"
         textureMap={venusMap} 
         size={0.44} 
-        distance={5.0} 
+        distance={7.2}  // Más separado
         speed={1.2} 
+        eccentricity={0.007}  // Casi circular
       />
       
       {/* Tierra - referencia base */}
       <Earth forwardedRef={earthRef} />
       
-      {/* Marte - más pequeño que la Tierra */}
+      {/* Marte - planeta rojo */}
       <PlanetMesh 
         name="Marte"
         textureMap={marteMap} 
         size={0.25} 
-        distance={7.5} 
+        distance={11.5}  // Más alejado
         speed={0.8} 
+        eccentricity={0.093}  // Órbita moderadamente elíptica
       />
       
       {/* Júpiter - el gigante gaseoso más grande */}
@@ -136,8 +153,9 @@ export default function Planets({ earthRef }) {
         name="Júpiter"
         textureMap={jupiterMap} 
         size={1.8} 
-        distance={11.0} 
+        distance={18.0}  // Mucho más alejado
         speed={0.4} 
+        eccentricity={0.048}  // Ligeramente elíptica
       />
       
       {/* Saturno - segundo más grande con anillos */}
@@ -145,17 +163,20 @@ export default function Planets({ earthRef }) {
         name="Saturno"
         textureMap={saturnoMap} 
         size={1.5} 
-        distance={14.5} 
+        distance={24.0}  // Muy alejado
         speed={0.32} 
+        eccentricity={0.056}  // Órbita elíptica
       />
       
-      {/* Urano - gigante de hielo */}
+      {/* Urano - gigante de hielo inclinado */}
       <PlanetMesh 
         name="Urano"
         textureMap={uranoMap} 
         size={0.9} 
-        distance={18.0} 
+        distance={30.0}  // Extremadamente alejado
         speed={0.22} 
+        eccentricity={0.047}  // Ligeramente elíptica
+        inclination={0.013}  // Pequeña inclinación
       />
       
       {/* Neptuno - el más lejano */}
@@ -163,8 +184,10 @@ export default function Planets({ earthRef }) {
         name="Neptuno"
         textureMap={neptunoMap} 
         size={0.88} 
-        distance={21.5} 
+        distance={36.0}  // El más lejano
         speed={0.18} 
+        eccentricity={0.009}  // Casi circular
+        inclination={0.031}  // Inclinación orbital
       />
       
       {/* Luna orbitando la Tierra */}

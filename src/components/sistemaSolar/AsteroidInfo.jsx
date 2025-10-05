@@ -16,7 +16,7 @@ const AsteroidInfo = ({ asteroids, onClose, isMockData = false }) => {
     <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-md text-white p-4 rounded-lg max-w-md max-h-96 overflow-y-auto z-20">
       <div className="flex justify-between items-start mb-3">
         <h3 className="font-bold text-lg">
-          {isMockData ? '⚡ Asteroides (Simulados)' : '🌠 Asteroides Cercanos'}
+          {isMockData ? '⚡ Asteroids (Simulated)' : '🌠 Near-Earth Asteroids'}
         </h3>
         <button 
           onClick={onClose}
@@ -28,17 +28,17 @@ const AsteroidInfo = ({ asteroids, onClose, isMockData = false }) => {
       
       {isMockData && (
         <div className="mb-3 p-2 bg-yellow-500/20 border border-yellow-500/40 rounded text-xs text-yellow-200">
-          ⚠️ La API de NASA no está disponible. Mostrando datos de ejemplo educativos.
+          ⚠️ NASA API unavailable. Showing educational sample data.
         </div>
       )}
       
       <div className="mb-3 text-sm text-gray-300">
         <p>Total: <span className="text-blue-400 font-semibold">{asteroids.length}</span></p>
-        <p>Potencialmente peligrosos: <span className="text-red-400 font-semibold">{potentiallyHazardous}</span></p>
+        <p>Potentially hazardous: <span className="text-red-400 font-semibold">{potentiallyHazardous}</span></p>
       </div>
 
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-gray-400 mb-2">Los 10 más cercanos:</h4>
+        <h4 className="text-sm font-semibold text-gray-400 mb-2">Closest 10:</h4>
         {sortedAsteroids.map((asteroid, index) => (
           <div 
             key={asteroid.id} 
@@ -64,7 +64,7 @@ const AsteroidInfo = ({ asteroids, onClose, isMockData = false }) => {
                 </p>
               </div>
               {asteroid.isPotentiallyHazardous && (
-                <span className="text-red-400 text-lg" title="Potencialmente peligroso">
+                <span className="text-red-400 text-lg" title="Potentially hazardous">
                   ⚠️
                 </span>
               )}
@@ -74,8 +74,8 @@ const AsteroidInfo = ({ asteroids, onClose, isMockData = false }) => {
       </div>
 
       <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
-        <p>🛰️ {isMockData ? 'Datos simulados para demostración' : 'Datos de NASA NeoWs API'}</p>
-        <p>Los asteroides rojos son potencialmente peligrosos</p>
+        <p>🛰️ {isMockData ? 'Simulated data for demonstration' : 'Data from NASA NeoWs API'}</p>
+        <p>Red asteroids are potentially hazardous</p>
       </div>
     </div>
   );

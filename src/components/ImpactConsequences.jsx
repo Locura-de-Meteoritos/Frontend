@@ -32,17 +32,17 @@ export default function ImpactConsequences({ impact, show = true }) {
     normalizedImpact = {
       consequences: {
         tsunami: {
-          risk: 'BAJO',
-          description: 'Análisis de tsunami no disponible'
+          risk: 'LOW',
+          description: 'Tsunami analysis not available'
         },
         seismic: {
           magnitude: '0.0',
-          description: 'Datos sísmicos no disponibles',
-          felt: 'No disponible'
+          description: 'Seismic data not available',
+          felt: 'Not available'
         },
         atmospheric: {
-          risk: 'BAJO',
-          description: 'Análisis atmosférico no disponible',
+          risk: 'LOW',
+          description: 'Atmospheric analysis not available',
           coolingYears: 0,
           dustTons: 0,
           ozoneDepletion: false
@@ -52,23 +52,23 @@ export default function ImpactConsequences({ impact, show = true }) {
           evacuationRadius: impact.radii?.total || 0
         },
         fire: {
-          risk: 'BAJO',
-          description: 'Análisis de incendios no disponible'
+          risk: 'LOW',
+          description: 'Fire analysis not available'
         }
       },
       historical: {
-        comparison: 'Comparación histórica no disponible',
+        comparison: 'Historical comparison not available',
         event: {
           name: 'N/A',
           energy: 0,
-          casualties: 'Datos no disponibles'
+          casualties: 'Data not available'
         }
       },
       summary: {
         severity: determineSeverity(impact.energy),
-        primaryThreat: 'Onda expansiva y calor'
+        primaryThreat: 'Shockwave and heat'
       },
-      impactType: 'TERRESTRE',
+      impactType: 'TERRESTRIAL',
       energy: impact.energy || { kilotons: 0, megatons: 0, hiroshimasEquivalent: 0 },
       radii: impact.radii || { total: 0, severe: 0, moderate: 0, light: 0 }
     };
@@ -102,18 +102,18 @@ export default function ImpactConsequences({ impact, show = true }) {
           margin: 0,
           marginBottom: 8,
           fontSize: '1.4em',
-          color: summary.severity === 'CATASTRÓFICO' ? '#ff6b6b' :
-                 summary.severity === 'SEVERO' ? '#ffa500' :
-                 summary.severity === 'MODERADO' ? '#feca57' : '#51cf66'
+          color: summary.severity === 'CATASTROPHIC' ? '#ff6b6b' :
+                 summary.severity === 'SEVERE' ? '#ffa500' :
+                 summary.severity === 'MODERATE' ? '#feca57' : '#51cf66'
         }}>
           ⚠️ {summary.severity}
         </h3>
         <div style={{ fontSize: '0.9em', color: '#a0a0a0' }}>
-          Amenaza Principal: <strong style={{ color: '#fff' }}>{summary.primaryThreat}</strong>
+          Primary Threat: <strong style={{ color: '#fff' }}>{summary.primaryThreat}</strong>
         </div>
         <div style={{ fontSize: '0.85em', color: '#a0a0a0', marginTop: 4 }}>
-          Tipo de Impacto: <strong style={{ color: impactType === 'OCÉANO' ? '#4fc3f7' : '#8d6e63' }}>
-            {impactType === 'OCÉANO' ? '🌊 ' : '🏔️ '}{impactType}
+          Impact Type: <strong style={{ color: impactType === 'OCEAN' ? '#4fc3f7' : '#8d6e63' }}>
+            {impactType === 'OCEAN' ? '🌊 ' : '🏔️ '}{impactType}
           </strong>
         </div>
       </div>
@@ -127,7 +127,7 @@ export default function ImpactConsequences({ impact, show = true }) {
         marginBottom: 16
       }}>
         <div style={{ fontSize: '0.85em', fontWeight: 700, color: '#feca57', marginBottom: 6 }}>
-          📊 COMPARACIÓN HISTÓRICA
+          📊 HISTORICAL COMPARISON
         </div>
         <div style={{ fontSize: '0.9em', marginBottom: 6 }}>
           {historical.comparison}
@@ -152,7 +152,7 @@ export default function ImpactConsequences({ impact, show = true }) {
           borderRadius: 6,
           border: '1px solid rgba(102, 126, 234, 0.4)'
         }}>
-          <div style={{ fontSize: '0.75em', color: '#a0a0a0', marginBottom: 4 }}>Energía</div>
+          <div style={{ fontSize: '0.75em', color: '#a0a0a0', marginBottom: 4 }}>Energy</div>
           <div style={{ fontSize: '1.3em', fontWeight: 700, color: '#feca57' }}>
             {energy.kilotons >= 1000 
               ? `${energy.megatons.toFixed(1)} Mt`
@@ -166,7 +166,7 @@ export default function ImpactConsequences({ impact, show = true }) {
           borderRadius: 6,
           border: '1px solid rgba(102, 126, 234, 0.4)'
         }}>
-          <div style={{ fontSize: '0.75em', color: '#a0a0a0', marginBottom: 4 }}>Equivalente</div>
+          <div style={{ fontSize: '0.75em', color: '#a0a0a0', marginBottom: 4 }}>Equivalent</div>
           <div style={{ fontSize: '1.3em', fontWeight: 700, color: '#feca57' }}>
             {energy.hiroshimasEquivalent >= 1 
               ? `${energy.hiroshimasEquivalent.toFixed(0)}× Hiroshima`
@@ -184,13 +184,13 @@ export default function ImpactConsequences({ impact, show = true }) {
           fontSize: '1.1em',
           color: '#ff6b6b'
         }}>
-          🚨 CONSECUENCIAS ESTIMADAS
+          🚨 ESTIMATED CONSEQUENCES
         </h4>
 
         {/* Tsunami */}
         <ConsequenceItem
           icon="🌊"
-          label="Riesgo de Tsunami"
+          label="Tsunami Risk"
           value={consequences.tsunami.risk}
           severity={consequences.tsunami.risk}
           details={consequences.tsunami.description}
@@ -199,17 +199,17 @@ export default function ImpactConsequences({ impact, show = true }) {
         {/* Actividad Sísmica */}
         <ConsequenceItem
           icon="🌋"
-          label="Actividad Sísmica"
-          value={`Magnitud ${consequences.seismic.magnitude}`}
-          severity={parseFloat(consequences.seismic.magnitude) > 7 ? 'ALTO' : 
-                   parseFloat(consequences.seismic.magnitude) > 5 ? 'MODERADO' : 'BAJO'}
+          label="Seismic Activity"
+          value={`Magnitude ${consequences.seismic.magnitude}`}
+          severity={parseFloat(consequences.seismic.magnitude) > 7 ? 'HIGH' : 
+                   parseFloat(consequences.seismic.magnitude) > 5 ? 'MODERATE' : 'LOW'}
           details={consequences.seismic.description}
         />
 
         {/* Cambio Atmosférico */}
         <ConsequenceItem
           icon="☁️"
-          label="Cambio Atmosférico"
+          label="Atmospheric Change"
           value={consequences.atmospheric.risk}
           severity={consequences.atmospheric.risk}
           details={consequences.atmospheric.description}
@@ -218,17 +218,17 @@ export default function ImpactConsequences({ impact, show = true }) {
         {/* Población en Riesgo */}
         <ConsequenceItem
           icon="🏙️"
-          label="Población en Riesgo"
+          label="Population at Risk"
           value={formatPopulation(consequences.population.total)}
-          severity={consequences.population.total > 1000000 ? 'MUY ALTO' : 
-                   consequences.population.total > 100000 ? 'ALTO' : 'MODERADO'}
-          details={`Evacuación requerida: ${consequences.population.evacuationRadius.toFixed(1)} km`}
+          severity={consequences.population.total > 1000000 ? 'VERY HIGH' : 
+                   consequences.population.total > 100000 ? 'HIGH' : 'MODERATE'}
+          details={`Evacuation required: ${consequences.population.evacuationRadius.toFixed(1)} km`}
         />
 
         {/* Incendios */}
         <ConsequenceItem
           icon="🔥"
-          label="Incendios Masivos"
+          label="Massive Fires"
           value={consequences.fire.risk}
           severity={consequences.fire.risk}
           details={consequences.fire.description}
@@ -238,10 +238,10 @@ export default function ImpactConsequences({ impact, show = true }) {
         {parseFloat(consequences.seismic.magnitude) > 4 && (
           <ConsequenceItem
             icon="📡"
-            label="Alcance Sísmico"
+            label="Seismic Range"
             value={consequences.seismic.felt}
-            severity="MODERADO"
-            details="Ondas sísmicas detectables"
+            severity="MODERATE"
+            details="Detectable seismic waves"
           />
         )}
       </div>
@@ -254,25 +254,25 @@ export default function ImpactConsequences({ impact, show = true }) {
         marginBottom: 12
       }}>
         <div style={{ fontSize: '0.9em', fontWeight: 700, marginBottom: 8, color: '#feca57' }}>
-          📏 RADIOS DE DAÑO
+          📏 DAMAGE RADII
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.85em' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#ff6b6b' }}>● Destrucción Total</span>
+            <span style={{ color: '#ff6b6b' }}>● Total Destruction</span>
             <strong>{radii.total.toFixed(2)} km</strong>
           </div>
           {radii.severe !== undefined && (
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#ff9800' }}>● Daño Severo</span>
+              <span style={{ color: '#ff9800' }}>● Severe Damage</span>
               <strong>{radii.severe.toFixed(2)} km</strong>
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#ffc107' }}>● Daño Moderado</span>
+            <span style={{ color: '#ffc107' }}>● Moderate Damage</span>
             <strong>{radii.moderate.toFixed(2)} km</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#4caf50' }}>● Daño Leve</span>
+            <span style={{ color: '#4caf50' }}>● Light Damage</span>
             <strong>{radii.light.toFixed(2)} km</strong>
           </div>
         </div>
@@ -290,7 +290,7 @@ export default function ImpactConsequences({ impact, show = true }) {
           color: '#4fc3f7',
           textAlign: 'center'
         }}>
-          🛰️ Datos calculados por Backend (NASA Models)
+          🛰️ Data calculated by Backend (NASA Models)
         </div>
       )}
 
@@ -304,13 +304,13 @@ export default function ImpactConsequences({ impact, show = true }) {
           marginBottom: 12
         }}>
           <div style={{ fontSize: '0.85em', fontWeight: 700, color: '#ce93d8', marginBottom: 6 }}>
-            ❄️ EFECTOS CLIMÁTICOS DE LARGO PLAZO
+            ❄️ LONG-TERM CLIMATE EFFECTS
           </div>
           <div style={{ fontSize: '0.8em' }}>
-            <div>• Enfriamiento global: <strong>{consequences.atmospheric.coolingYears} años</strong></div>
-            <div>• Polvo atmosférico: <strong>{consequences.atmospheric.dustTons.toLocaleString()} toneladas</strong></div>
+            <div>• Global cooling: <strong>{consequences.atmospheric.coolingYears} years</strong></div>
+            <div>• Atmospheric dust: <strong>{consequences.atmospheric.dustTons.toLocaleString()} tons</strong></div>
             {consequences.atmospheric.ozoneDepletion && (
-              <div style={{ color: '#ff6b6b' }}>• ⚠️ Reducción capa de ozono</div>
+              <div style={{ color: '#ff6b6b' }}>• ⚠️ Ozone layer depletion</div>
             )}
           </div>
         </div>
@@ -324,8 +324,8 @@ export default function ImpactConsequences({ impact, show = true }) {
         fontSize: '0.7em',
         color: '#666'
       }}>
-        <div>📡 Basado en datos de NASA NEO, CNEOS JPL</div>
-        <div>⚠️ Estimaciones con fines educativos</div>
+        <div>📡 Based on NASA NEO, CNEOS JPL data</div>
+        <div>⚠️ Estimates for educational purposes</div>
       </div>
     </div>
   );
@@ -398,14 +398,14 @@ function formatPopulation(num) {
  * @returns {string} - Nivel de severidad
  */
 function determineSeverity(energy) {
-  if (!energy || !energy.kilotons) return 'DESCONOCIDO';
+  if (!energy || !energy.kilotons) return 'UNKNOWN';
   
   const kt = energy.kilotons;
   
-  if (kt >= 100000) return 'EXTINCIÓN MASIVA';
-  if (kt >= 10000) return 'CATASTRÓFICO';
-  if (kt >= 1000) return 'SEVERO';
-  if (kt >= 100) return 'MODERADO';
-  if (kt >= 10) return 'BAJO';
-  return 'MÍNIMO';
+  if (kt >= 100000) return 'MASS EXTINCTION';
+  if (kt >= 10000) return 'CATASTROPHIC';
+  if (kt >= 1000) return 'SEVERE';
+  if (kt >= 100) return 'MODERATE';
+  if (kt >= 10) return 'LOW';
+  return 'MINIMAL';
 }

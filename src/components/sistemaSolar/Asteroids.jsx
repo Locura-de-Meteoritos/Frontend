@@ -10,8 +10,10 @@ function AsteroidMesh({ asteroid, index }) {
   
   // Parámetros orbitales
   const { distance, speed, angle, size, isPotentiallyHazardous } = useMemo(() => {
-    // Distancia mapeada a escala visual (entre la Tierra y Marte generalmente)
-    const mappedDistance = 4 + (asteroid.distance * 2); // Entre 4 y ~8 AU visual
+    // Distancia mapeada a escala visual ajustada al nuevo sistema
+    // Los asteroides de NASA orbitan cerca de la Tierra (0.5-2.5 AU)
+    // Los mapeamos entre la órbita de la Tierra (9.5) y Marte (11.5)
+    const mappedDistance = 8 + (asteroid.distance * 3); // Entre 8 y ~15 AU visual
     
     // Velocidad orbital (más rápido si está más cerca)
     const orbitalSpeed = 0.3 / Math.sqrt(asteroid.distance);
