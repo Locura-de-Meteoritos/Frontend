@@ -20,14 +20,10 @@ const Header = () => {
             <Link to="/asteroides" className="text-gray-200 hover:text-white transition-colors">
               Asteroides
             </Link>
-            <Link to="/impactos" className="text-gray-200 hover:text-white transition-colors">
-              Impactos ambientales
-            </Link>
           </div>
           <img
             src={boleeuImg}
             alt="Comenzar"
-            onClick={() => navigate('/simulacion')}
             className="h-10 w-auto cursor-pointer hover:scale-110 transition-transform duration-200"
             style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }}
           />
