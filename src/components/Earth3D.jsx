@@ -87,7 +87,6 @@ export default function Earth3D({
   rotationSpeed = 0.01,
   cloudRotationSpeed = 0.008,
   enableAutoRotate = false
-  , realMarkers = []
 }) {
   const groupRef = useRef();
   const cloudsRef = useRef();
@@ -247,36 +246,6 @@ export default function Earth3D({
       earthRef.current.getEarthMesh = () => earthMeshRef.current;
       earthRef.current.getCloudsMesh = () => cloudsRef.current;
       earthRef.current.getAtmosphereMesh = () => atmosphereRef.current;
-
-      // Convierte lat/lng (grados) a posición local en el espacio del grupo del planeta
-      earthRef.current.latLngToLocal = (lat, lng, radius = planetRadius) => {
-        // lat: norte(+)/sur(-), lng: este(+) / oeste(-)
-        const latRad = (lat * Math.PI) / 180.0;
-        const lonRad = (lng * Math.PI) / 180.0;
-
-        // Usamos convención: x = cos(lat)*sin(lon), y = sin(lat), z = cos(lat)*cos(lon)
-        const x = Math.cos(latRad) * Math.sin(lonRad) * radius;
-        const y = Math.sin(latRad) * radius;
-        const z = Math.cos(latRad) * Math.cos(lonRad) * radius;
-
-        // Añadir offset vertical del centro del planeta
-        return new THREE.Vector3(x, y + planetOffsetY, z);
-      };
-
-      // Convierte lat/lng a posición WORLD (aplica la transformación del grupo si existe)
-      earthRef.current.latLngToWorld = (lat, lng, radius = planetRadius) => {
-        const local = earthRef.current.latLngToLocal(lat, lng, radius);
-        try {
-          if (planetGroup.current && typeof planetGroup.current.localToWorld === 'function') {
-            const p = local.clone();
-            planetGroup.current.localToWorld(p);
-            return p;
-          }
-        } catch (e) {
-          // caerá por defecto a la posición local si algo falla
-        }
-        return local;
-      };
     }
 
     // ========================================================================
@@ -300,73 +269,6 @@ export default function Earth3D({
       }
     };
   }, [earthRef, planetRadius, planetOffsetY, showAtmosphere, showClouds, earthTilt, loading, textures]);
-
-  // ============================================================================
-  // RENDER MARKERS: Si se pasan `realMarkers` (array de {id, lat, lng, size, color}),
-  // los añadimos como pequeños meshes sobre la superficie y los limpiamos al desmontar.
-  // Los marcadores se agregan como hijos del grupo del planeta para heredar rotación/traslación.
-  // ============================================================================
-  useEffect(() => {
-    if (!planetGroup.current) return;
-
-    // Usaremos una geometría compartida para los marcadores y guardaremos referencias
-    const sharedGeo = new THREE.SphereGeometry(Math.max(planetRadius * 0.01, 0.5), 12, 12);
-    const existingMarkers = new Map();
-
-    // Añadir o actualizar marcadores
-    realMarkers.forEach(m => {
-      const id = m.id || `${m.lat}_${m.lng}`;
-      let mesh = planetGroup.current.getObjectByName(`marker-${id}`);
-      const markerRadius = (m.size !== undefined) ? m.size : planetRadius * 0.01;
-
-      if (!mesh) {
-        const mat = new THREE.MeshStandardMaterial({
-          color: m.color || 0xff4444,
-          emissive: m.color || 0xff4444,
-          emissiveIntensity: 0.6,
-          metalness: 0.1,
-          roughness: 0.4
-        });
-        mesh = new THREE.Mesh(sharedGeo.clone(), mat);
-        mesh.name = `marker-${id}`;
-        mesh.userData.__markerMaterial = mat;
-        planetGroup.current.add(mesh);
-      }
-
-      // Posición local (sobre la superficie, con pequeño offset hacia afuera)
-      const surfaceRadius = planetRadius + (m.altitudeOffset || planetRadius * 0.002) + (m.radiusOffset || 0);
-      const localPos = earthRef && earthRef.current && earthRef.current.latLngToLocal
-        ? earthRef.current.latLngToLocal(m.lat, m.lng, surfaceRadius)
-        : new THREE.Vector3(0, planetOffsetY + planetRadius, 0);
-
-      mesh.position.copy(localPos);
-      mesh.scale.set(markerRadius, markerRadius, markerRadius);
-      existingMarkers.set(id, mesh);
-    });
-
-    // Remover marcadores que ya no están
-    planetGroup.current.children.slice().forEach(child => {
-      if (!child.name || !child.name.startsWith('marker-')) return;
-      const id = child.name.replace('marker-', '');
-      if (!existingMarkers.has(id)) {
-        // dispose material/geometry
-        if (child.geometry) child.geometry.dispose();
-        if (child.userData && child.userData.__markerMaterial) child.userData.__markerMaterial.dispose();
-        planetGroup.current.remove(child);
-      }
-    });
-
-    // Cleanup: on unmount remove all markers created by este efecto
-    return () => {
-      if (!planetGroup.current) return;
-      planetGroup.current.children.slice().forEach(child => {
-        if (!child.name || !child.name.startsWith('marker-')) return;
-        if (child.geometry) child.geometry.dispose();
-        if (child.userData && child.userData.__markerMaterial) child.userData.__markerMaterial.dispose();
-        planetGroup.current.remove(child);
-      });
-    };
-  }, [realMarkers, planetGroup, planetRadius, planetOffsetY, earthRef]);
 
   // ============================================================================
   // ANIMACIÓN: Rotación y actualización de shaders con viewVector dinámico
