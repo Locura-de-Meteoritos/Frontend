@@ -326,7 +326,7 @@ const Simulacion = () => {
     // Guardamos también todos los datos físicos calculados para poder usarlos en la visualización (p.ej. tooltips)
     const crater = { 
       id: Date.now(), 
-      localPosition, // Usar localPosition en lugar de position
+      localPosition, 
       radius, 
       depth: radius * 0.25, 
       colorScheme, 
