@@ -55,6 +55,9 @@ export default function ChatAgent({ apiKey }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  // ID del agente entrenado
+  const AGENT_ID = 'ag:63df4435:20251004:untitled-agent:5a96c43c'
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!prompt.trim()) return
@@ -66,9 +69,9 @@ export default function ChatAgent({ apiKey }) {
     setError(null)
 
     try {
-      const url = 'https://api.mistral.ai/v1/chat/completions'
+      const url = 'https://api.mistral.ai/v1/agents/completions'
       const body = {
-        model: 'mistral-medium',
+        agent_id: AGENT_ID,
         messages: [...messages, userMessage].map(msg => ({
           role: msg.role,
           content: msg.content
@@ -84,7 +87,10 @@ export default function ChatAgent({ apiKey }) {
         body: JSON.stringify(body),
       })
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`)
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(`API error: ${res.status} - ${errorData.message || res.statusText}`)
+      }
 
       const data = await res.json()
       const text = data.choices?.[0]?.message?.content || 'Sin respuesta'
@@ -92,6 +98,7 @@ export default function ChatAgent({ apiKey }) {
       setMessages(prev => [...prev, { role: 'assistant', content: text }])
     } catch (err) {
       setError(err.message)
+      console.error('Error al comunicarse con el agente:', err)
     } finally {
       setIsLoading(false)
     }
@@ -127,12 +134,12 @@ export default function ChatAgent({ apiKey }) {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Asistente Mistral</h3>
-              <p className="text-xs text-white/80">Siempre disponible</p>
+              <h3 className="font-semibold text-lg">🌠 Meteor Madness AI</h3>
+              <p className="text-xs text-white/80">Experto en asteroides y meteoritos</p>
             </div>
           </div>
           <button
@@ -152,7 +159,8 @@ export default function ChatAgent({ apiKey }) {
               <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="text-sm font-medium">¡Hola! ¿En qué puedo ayudarte?</p>
+              <p className="text-sm font-medium">¡Hola! Soy tu asistente experto en asteroides 🌠</p>
+              <p className="text-xs text-gray-400 mt-2">Pregúntame sobre meteoritos, impactos, NEOs y más</p>
             </div>
           )}
 
