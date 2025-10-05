@@ -1,9 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import { StarsCanvas } from './main/star-background';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
+
+// Eventos históricos para comparación
+const historicalEvents = [
+  {
+    id: 'hist-1',
+    name: 'Cheliábinsk 2013',
+    diameter: 20,
+    velocity: 19,
+    energy: 500,
+    location: 'Rusia',
+    casualties: '1500+ heridos',
+    hazardous: true,
+    date: 'Histórico',
+    source: 'Evento Real'
+  },
+  {
+    id: 'hist-2',
+    name: 'Tunguska 1908',
+    diameter: 60,
+    velocity: 15,
+    energy: 15000,
+    location: 'Siberia',
+    casualties: '2000 km² devastados',
+    hazardous: true,
+    date: 'Histórico',
+    source: 'Evento Real'
+  },
+  {
+    id: 'hist-3',
+    name: 'Chicxulub (Extinción Dinosaurios)',
+    diameter: 10000,
+    velocity: 20,
+    energy: 100000000,
+    location: 'México',
+    casualties: 'Extinción masiva',
+    hazardous: true,
+    date: 'Histórico',
+    source: 'Evento Real'
+  }
+];
+
+// Asteroides Sentry (riesgo real CNEOS)
+const sentryAsteroids = [
+  {
+    id: 'sentry-1',
+    name: '(29075) 1950 DA',
+    diameter: 1300,
+    velocity: 15,
+    distance: 0,
+    hazardous: true,
+    date: '2880-03-16',
+    source: 'CNEOS Sentry',
+    riskLevel: 'Alto'
+  },
+  {
+    id: 'sentry-2',
+    name: '(99942) Apophis',
+    diameter: 370,
+    velocity: 12.6,
+    distance: 31000,
+    hazardous: true,
+    date: '2029-04-13',
+    source: 'CNEOS Sentry',
+    riskLevel: 'Medio'
+  },
+  {
+    id: 'sentry-3',
+    name: '2023 DW',
+    diameter: 50,
+    velocity: 18.2,
+    distance: 0,
+    hazardous: true,
+    date: '2046-02-14',
+    source: 'CNEOS Sentry',
+    riskLevel: 'Bajo'
+  }
+];
 
 const AsteroidList = () => {
   const [asteroids, setAsteroids] = useState([]);
@@ -11,14 +90,64 @@ const AsteroidList = () => {
   const [selectedAsteroid, setSelectedAsteroid] = useState(null);
   const [impactData, setImpactData] = useState(null);
   const [filterHazardous, setFilterHazardous] = useState(false);
+  const [deviation, setDeviation] = useState(0.001);
+  const [dataSource, setDataSource] = useState('NEO');
+  
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const impactCirclesRef = useRef([]);
 
   useEffect(() => {
     loadNEOData();
   }, []);
 
+  // Inicializar mapa Leaflet
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    const map = L.map(mapRef.current).setView([20, 0], 2);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Agregar leyenda
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function() {
+      const div = L.DomUtil.create('div', 'leaflet-legend');
+      div.style.cssText = 'background: rgba(0, 0, 0, 0.8); padding: 15px; border-radius: 8px; font-size: 0.85em; color: white;';
+      div.innerHTML = `
+        <div style="display: flex; align-items: center; margin: 5px 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 107, 107, 0.5); margin-right: 10px;"></div>
+          <span>Zona de Destrucción Total</span>
+        </div>
+        <div style="display: flex; align-items: center; margin: 5px 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 193, 7, 0.5); margin-right: 10px;"></div>
+          <span>Zona de Daño Moderado</span>
+        </div>
+        <div style="display: flex; align-items: center; margin: 5px 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(76, 175, 80, 0.5); margin-right: 10px;"></div>
+          <span>Zona de Daño Leve</span>
+        </div>
+      `;
+      return div;
+    };
+    legend.addTo(map);
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
   // Cargar datos de la API de NASA
   const loadNEOData = async () => {
     setLoading(true);
+    setDataSource('NEO');
     try {
       const today = new Date();
       const endDate = new Date(today);
@@ -42,7 +171,8 @@ const AsteroidList = () => {
             velocity: parseFloat(neo.close_approach_data[0].relative_velocity.kilometers_per_second),
             distance: parseFloat(neo.close_approach_data[0].miss_distance.kilometers),
             hazardous: neo.is_potentially_hazardous_asteroid,
-            date: neo.close_approach_data[0].close_approach_date
+            date: neo.close_approach_data[0].close_approach_date,
+            source: 'NEO API'
           });
         });
       });
@@ -50,9 +180,30 @@ const AsteroidList = () => {
       setAsteroids(neoList);
     } catch (error) {
       console.error('Error al cargar datos NEO:', error);
+      alert('Error al cargar datos NEO');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Cargar datos Sentry
+  const loadSentryData = () => {
+    setLoading(true);
+    setDataSource('Sentry');
+    setTimeout(() => {
+      setAsteroids(sentryAsteroids);
+      setLoading(false);
+    }, 500);
+  };
+
+  // Cargar eventos históricos
+  const loadHistoricalEvents = () => {
+    setLoading(true);
+    setDataSource('Histórico');
+    setTimeout(() => {
+      setAsteroids(historicalEvents);
+      setLoading(false);
+    }, 500);
   };
 
   // Calcular energía de impacto (kilotones TNT)
@@ -78,14 +229,105 @@ const AsteroidList = () => {
   const simulateImpact = (asteroid) => {
     const energy = calculateImpactEnergy(asteroid.diameter, asteroid.velocity);
     const radii = calculateDamageRadii(energy);
+    const lat = (Math.random() * 160) - 80;
+    const lng = (Math.random() * 360) - 180;
     
     setSelectedAsteroid(asteroid);
     setImpactData({
       energy,
       radii,
-      lat: (Math.random() * 160) - 80,
-      lng: (Math.random() * 360) - 180
+      lat,
+      lng,
+      isOcean: Math.abs(lat) < 60 && (lng < -30 || lng > 120)
     });
+
+    // Actualizar mapa
+    if (mapInstanceRef.current) {
+      // Limpiar círculos anteriores
+      impactCirclesRef.current.forEach(layer => {
+        mapInstanceRef.current.removeLayer(layer);
+      });
+      impactCirclesRef.current = [];
+
+      // Dibujar círculos de daño
+      const circles = [
+        { radius: radii.total * 1000, color: '#ff6b6b', label: 'Total' },
+        { radius: radii.moderate * 1000, color: '#ffc107', label: 'Moderado' },
+        { radius: radii.light * 1000, color: '#4caf50', label: 'Leve' }
+      ];
+
+      circles.forEach(circle => {
+        const leafletCircle = L.circle([lat, lng], {
+          radius: circle.radius,
+          color: circle.color,
+          fillColor: circle.color,
+          fillOpacity: 0.3,
+          weight: 2
+        }).addTo(mapInstanceRef.current);
+        
+        impactCirclesRef.current.push(leafletCircle);
+      });
+
+      // Marker en el punto de impacto
+      const marker = L.marker([lat, lng]).addTo(mapInstanceRef.current);
+      marker.bindPopup(`<b>Punto de Impacto</b><br>${asteroid.name}`).openPopup();
+      impactCirclesRef.current.push(marker);
+
+      // Centrar mapa
+      mapInstanceRef.current.setView([lat, lng], 5);
+    }
+  };
+
+  // Simular mitigación
+  const simulateMitigation = () => {
+    if (!impactData || !mapInstanceRef.current) return;
+
+    const { lat, lng } = impactData;
+    const newLat = lat + (deviation * 100);
+    const newLng = lng + (deviation * 150);
+
+    // Dibujar nuevo círculo de impacto mitigado
+    const mitigatedCircle = L.circle([newLat, newLng], {
+      radius: impactCirclesRef.current[0].getRadius(),
+      color: '#51cf66',
+      fillColor: '#51cf66',
+      fillOpacity: 0.4,
+      weight: 3,
+      dashArray: '10, 10'
+    }).addTo(mapInstanceRef.current);
+
+    // Crear icono verde personalizado
+    const greenIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const mitigatedMarker = L.marker([newLat, newLng], { icon: greenIcon }).addTo(mapInstanceRef.current);
+    mitigatedMarker.bindPopup(`<b>Nuevo Punto de Impacto</b><br>Después de desviación de ${deviation}°`).openPopup();
+
+    // Línea de trayectoria
+    const trajectoryLine = L.polyline([
+      [lat, lng],
+      [newLat, newLng]
+    ], {
+      color: '#feca57',
+      weight: 3,
+      dashArray: '5, 10'
+    }).addTo(mapInstanceRef.current);
+
+    impactCirclesRef.current.push(mitigatedCircle, mitigatedMarker, trajectoryLine);
+
+    // Ajustar vista
+    mapInstanceRef.current.fitBounds([
+      [lat, lng],
+      [newLat, newLng]
+    ], { padding: [50, 50] });
+
+    alert(`✅ Simulación de Mitigación Completada\n\nDesviación: ${deviation}°\nNuevo impacto: ${Math.abs(newLat - lat).toFixed(2)}° de latitud desplazado\n\nEsto podría mover el impacto de una zona poblada a una zona segura.`);
   };
 
   // Obtener comparación histórica
@@ -137,10 +379,22 @@ const AsteroidList = () => {
                   🔄 Cargar NEO (7 días)
                 </button>
                 <button
+                  onClick={loadSentryData}
+                  className="w-full px-4 py-2 bg-[rgb(138,43,226)] rounded-lg hover:bg-[rgb(158,63,246)] transition-colors"
+                >
+                  ⚠️ Sentry Risk List
+                </button>
+                <button
                   onClick={() => setFilterHazardous(!filterHazardous)}
                   className="w-full px-4 py-2 bg-transparent border-2 border-[rgb(138,43,226)] rounded-lg hover:bg-[rgba(138,43,226,0.2)] transition-colors"
                 >
                   {filterHazardous ? '✅ Mostrar Todos' : '🔴 Solo Peligrosos'}
+                </button>
+                <button
+                  onClick={loadHistoricalEvents}
+                  className="w-full px-4 py-2 bg-transparent border-2 border-[rgb(138,43,226)] rounded-lg hover:bg-[rgba(138,43,226,0.2)] transition-colors"
+                >
+                  📜 Eventos Históricos
                 </button>
               </div>
 
@@ -165,7 +419,7 @@ const AsteroidList = () => {
                     </div>
                     <div className="text-xs text-gray-400">
                       📏 {asteroid.diameter.toFixed(0)}m | ⚡ {asteroid.velocity.toFixed(1)} km/s
-                      <br />📅 {asteroid.date}
+                      <br />📅 {asteroid.date} | 📡 {asteroid.source}
                     </div>
                   </div>
                 ))}
@@ -175,25 +429,14 @@ const AsteroidList = () => {
 
           {/* Panel Principal - Simulación */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Mapa Placeholder */}
+            {/* Mapa Leaflet */}
             <div className="glass p-6 rounded-lg border border-[rgba(138,43,226,0.3)]">
               <h2 className="text-2xl font-bold mb-4">🗺️ Simulador de Impacto</h2>
-              <div className="w-full h-64 bg-gradient-to-br from-[rgba(138,43,226,0.2)] to-[rgba(158,63,246,0.1)] rounded-lg flex items-center justify-center border border-[rgba(138,43,226,0.3)]">
-                {selectedAsteroid ? (
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">🎯</div>
-                    <p className="text-lg">Impacto simulado en</p>
-                    <p className="text-sm text-gray-400">
-                      Lat: {impactData?.lat.toFixed(2)}° | Lng: {impactData?.lng.toFixed(2)}°
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-400">
-                    <div className="text-6xl mb-4">🌍</div>
-                    <p>Selecciona un asteroide para simular impacto</p>
-                  </div>
-                )}
-              </div>
+              <div 
+                ref={mapRef} 
+                className="w-full h-96 rounded-lg border-2 border-[rgba(138,43,226,0.3)]"
+                style={{ zIndex: 1 }}
+              ></div>
             </div>
 
             {/* Estadísticas de Impacto */}
@@ -235,7 +478,7 @@ const AsteroidList = () => {
                   <h3 className="text-xl font-bold mb-4 text-red-400">⚠️ Consecuencias Estimadas</h3>
                   <div className="space-y-3">
                     {[
-                      { icon: '🌊', label: 'Riesgo de Tsunami', value: impactData.energy > 1000 ? '⚠️ ALTO' : '✅ Bajo' },
+                      { icon: '🌊', label: 'Riesgo de Tsunami', value: impactData.isOcean ? '⚠️ ALTO' : '✅ Bajo' },
                       { icon: '🌋', label: 'Actividad Sísmica', value: impactData.energy > 1000 ? '⚠️ Magnitud 6+' : '✅ Magnitud <4' },
                       { icon: '☁️', label: 'Cambio Atmosférico', value: impactData.energy > 10000 ? '⚠️ Invierno Nuclear' : '✅ Mínimo' },
                       { icon: '🏙️', label: 'Población en Riesgo', value: impactData.energy > 500 ? '⚠️ Millones' : '⚠️ Miles' },
@@ -247,6 +490,34 @@ const AsteroidList = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Panel de Mitigación */}
+                <div className="glass p-6 rounded-lg border-2 border-green-500/30">
+                  <h3 className="text-xl font-bold mb-4 text-green-400">🛡️ Estrategias de Mitigación</h3>
+                  
+                  <div className="mb-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-300">Desviación Orbital (grados)</span>
+                      <span className="text-sm font-bold text-green-400">{deviation}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.001"
+                      value={deviation}
+                      onChange={(e) => setDeviation(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-[rgba(255,255,255,0.2)] rounded-lg appearance-none cursor-pointer slider-thumb-green"
+                    />
+                  </div>
+
+                  <button
+                    onClick={simulateMitigation}
+                    className="w-full px-4 py-3 bg-green-500 rounded-lg hover:bg-green-600 transition-colors font-semibold"
+                  >
+                    🚀 Simular Desviación
+                  </button>
                 </div>
 
                 {/* Comparación Histórica */}
