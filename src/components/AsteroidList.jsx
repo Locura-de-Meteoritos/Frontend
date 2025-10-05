@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import { StarsCanvas } from './main/star-background';
@@ -11,16 +11,11 @@ const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
 const historicalEvents = [
   {
     id: 'hist-1',
-    name: 'Cheliábinsk 2013',
+    name: 'Chelyabinsk 2013',
     diameter: 20,
     velocity: 19,
-    energy: 50                    {
-                      { icon: '🌊', label: 'Tsunami Risk', value: impactData.isOcean ? '⚠️ HIGH' : '✅ Low' },
-                      { icon: '🌋', label: 'Seismic Activity', value: impactData.energy > 1000 ? '⚠️ Magnitude 6+' : '✅ Magnitude <4' },
-                      { icon: '☁️', label: 'Atmospheric Change', value: impactData.energy > 10000 ? '⚠️ Nuclear Winter' : '✅ Minimal' },
-                      { icon: '🏙️', label: 'Population at Risk', value: impactData.energy > 500 ? '⚠️ Millions' : '⚠️ Thousands' },
-                      { icon: '🔥', label: 'Massive Fires', value: impactData.energy > 100 ? '⚠️ Yes' : '✅ No' }
-                    ].map((item, i) => ( location: 'Russia',
+    energy: 500,
+    location: 'Russia',
     casualties: '1500+ injured',
     hazardous: true,
     date: 'Historical',
