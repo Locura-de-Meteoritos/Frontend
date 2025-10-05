@@ -104,7 +104,7 @@ function createAsteroidGeometry(seed = Math.random()) {
   return geometry;
 }
 
-export default function Asteroid({ start, target, speed = 0.5, onHit, debug = false, tipo='Roca', masa=1000, densidad=3000, angulo=45, color }) {
+export default function Asteroid({ start, target, speed = 0.5, onHit, debug = false, tipo='Roca', masa=1000, densidad=3000, angulo=45, color, radiusUnits: propRadiusUnits, diameterMeters }) {
   const mesh = useRef()
   const dir = useRef(new THREE.Vector3())
   const distance = useRef(0)
@@ -158,8 +158,11 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
   // Si quieres forzar todos los asteroides a un tamaño fijo, edita el valor de
   // FIXED_ASTEROID_RADIUS_UNITS abajo. Por ejemplo, 0.12 -> radio visual ~120 km
   // (recordar: 1 unidad = 1000 km en esta escena).
-  const FIXED_ASTEROID_RADIUS_UNITS = 0.5; // <-- Cambia este valor para ajustar el tamaño global
-  const FORCE_FIXED_SIZE = true; // <-- Si true, siempre usaremos FIXED_ASTEROID_RADIUS_UNITS
+  // Tamaño fijo (solo si quieres forzar un tamaño visual)
+  // 1 unidad = 1000 km. FIXED_ASTEROID_RADIUS_UNITS = 0.02 => 20 km radio visual
+  const FIXED_ASTEROID_RADIUS_UNITS = 0.02; // valor mínimo visible razonable
+  // Por defecto usar cálculo físico a partir de masa/densidad para evitar asteroides gigantes
+  const FORCE_FIXED_SIZE = false; // Si true, fuerza FIXED_ASTEROID_RADIUS_UNITS
 
   // ---------------------------
   // Cálculo físico del radio del asteroide
@@ -170,7 +173,16 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
   // Luego aplicamos una exageración visual y límites para que sean visibles en la escena.
   // Si forzamos tamaño fijo, usar la constante; si no, calcular desde masa/densidad
   let radius = FIXED_ASTEROID_RADIUS_UNITS;
-  if (!FORCE_FIXED_SIZE) {
+
+  // Si el caller pasó un radiusUnits explícito, usarlo (permite control desde la UI)
+  if (typeof propRadiusUnits === 'number' && !isNaN(propRadiusUnits)) {
+    radius = propRadiusUnits;
+  } else if (typeof diameterMeters === 'number' && !isNaN(diameterMeters)) {
+    // Si se pasa diameter en metros (por ejemplo desde NASA), convertir a unidades de escena
+    const METERS_PER_UNIT = 1000 * 1000; // 1 unidad = 1000 km = 1e6 m
+    const radiusMeters = Math.max(0, diameterMeters / 2);
+    radius = (radiusMeters / METERS_PER_UNIT) * 1; // VISUAL_SCALE = 1
+  } else if (!FORCE_FIXED_SIZE) {
     try {
       const masaKg = Math.max(Number(masa) || 1, 1);
       const dens = Math.max(Number(densidad) || 3000, 50);
@@ -180,15 +192,13 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
       const METERS_PER_UNIT = 1000 * 1000; // 1 unidad = 1000 km = 1e6 m
       let radiusUnits = radio_m / METERS_PER_UNIT;
 
-      // Visual scaling: aumentar un poco para que no sean microscópicos en la escena.
-      // Este factor solo afecta la representación, no los cálculos físicos.
-      // Ajustado para evitar tamaños enormes cuando la entrada es kilómetros/más grandes.
-      const VISUAL_SCALE = 12; // reducir para mantener tamaños razonables
+      // Visual scaling: usar 1 para mantener proporciones reales
+      const VISUAL_SCALE = 1;
       radiusUnits = radiusUnits * VISUAL_SCALE;
 
-      // Clamp visual radius to reasonable bounds (evitar tamaños lunares)
-      const MIN_VISUAL = 0.005; // ~5 km visual radio
-      const MAX_VISUAL = 1.2; // evita bolas enormes
+      // Clamp visual radius a límites razonables
+      const MIN_VISUAL = 0.001; // ~1 km visual radio
+      const MAX_VISUAL = 2.0; // evita bolas enormes
       radius = THREE.MathUtils.clamp(radiusUnits, MIN_VISUAL, MAX_VISUAL);
     } catch (err) {
       // fallback al comportamiento previo si algo va mal
@@ -197,6 +207,9 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
       radius = THREE.MathUtils.clamp(baseRadius * sizeFactor, 0.12, 1.2)
     }
   }
+  
+  // Asegurar visibilidad mínima: si el cálculo físico produjo algo muy pequeño, usar el fixed mínimo
+  if (radius < FIXED_ASTEROID_RADIUS_UNITS) radius = FIXED_ASTEROID_RADIUS_UNITS;
   // Asegurar que el mesh use la escala fija (override absoluto)
   useEffect(() => {
     try {
