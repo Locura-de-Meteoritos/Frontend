@@ -372,7 +372,7 @@ const Simulacion = () => {
       <Header />
 
       {/* Panel lateral con estilo glass */}
-      <aside className="glass" style={{ position: 'absolute', left: 16, top: 96, width: 320, zIndex: 40, padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
+      <aside className="glass" style={{ position: 'absolute', left: 16, top: 150, width: 320, zIndex: 40, padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
         <h3 className="text-lg font-semibold mb-4 text-white">Configurar Asteroide</h3>
 
         {/* --- NEO Catalog --- */}

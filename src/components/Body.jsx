@@ -85,20 +85,7 @@ const Body = () => {
         </div>
       </section> */}
 
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">
-            ¿Listo para explorar el cosmos?
-          </h2>
-          <p className="text-xl text-gray-600 mb-10">
-            Únete a miles de entusiastas del espacio y comienza tu viaje hacia las estrellas
-          </p>
-          <button className="bg-black text-white px-10 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-medium">
-            Comenzar Ahora
-          </button>
-        </div>
-      </section>
+      
     </>
   );
 };

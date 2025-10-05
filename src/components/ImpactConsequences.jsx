@@ -13,7 +13,7 @@ export default function ImpactConsequences({ impact, show = true }) {
     <div className="glass" style={{
       position: 'absolute',
       right: 20,
-      top: 110,
+      top: 140,
       width: 380,
       maxHeight: 'calc(100vh - 140px)',
       overflowY: 'auto',
