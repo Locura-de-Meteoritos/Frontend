@@ -3,11 +3,78 @@ import React from 'react';
 /**
  * Componente que muestra las consecuencias detalladas de un impacto de asteroide
  * Basado en el sistema IMPACTUS de NASA
+ * Compatible con API Backend y cálculos locales
  */
 export default function ImpactConsequences({ impact, show = true }) {
-  if (!show || !impact || !impact.consequences) return null;
+  if (!show || !impact) return null;
 
-  const { consequences, historical, summary, impactType, energy } = impact;
+  // ============================================================================
+  // ADAPTADOR: Normalizar estructura de datos (Backend vs Local)
+  // ============================================================================
+  // El backend puede devolver estructuras diferentes a los cálculos locales
+  // Este adaptador convierte ambos formatos a una estructura unificada
+  
+  const isBackend = impact._source === 'backend';
+  const hasConsequences = impact.consequences || false;
+  
+  // Si no hay datos de consecuencias, no mostrar nada
+  if (!hasConsequences && !impact.energy && !impact.radii) return null;
+  
+  // Normalizar estructura de datos
+  let normalizedImpact = {};
+  
+  if (hasConsequences) {
+    // Formato LOCAL (con consequences)
+    normalizedImpact = impact;
+  } else {
+    // Formato BACKEND o simplificado (sin consequences)
+    // Construir estructura de consequences a partir de datos disponibles
+    normalizedImpact = {
+      consequences: {
+        tsunami: {
+          risk: 'BAJO',
+          description: 'Análisis de tsunami no disponible'
+        },
+        seismic: {
+          magnitude: '0.0',
+          description: 'Datos sísmicos no disponibles',
+          felt: 'No disponible'
+        },
+        atmospheric: {
+          risk: 'BAJO',
+          description: 'Análisis atmosférico no disponible',
+          coolingYears: 0,
+          dustTons: 0,
+          ozoneDepletion: false
+        },
+        population: {
+          total: 0,
+          evacuationRadius: impact.radii?.total || 0
+        },
+        fire: {
+          risk: 'BAJO',
+          description: 'Análisis de incendios no disponible'
+        }
+      },
+      historical: {
+        comparison: 'Comparación histórica no disponible',
+        event: {
+          name: 'N/A',
+          energy: 0,
+          casualties: 'Datos no disponibles'
+        }
+      },
+      summary: {
+        severity: determineSeverity(impact.energy),
+        primaryThreat: 'Onda expansiva y calor'
+      },
+      impactType: 'TERRESTRE',
+      energy: impact.energy || { kilotons: 0, megatons: 0, hiroshimasEquivalent: 0 },
+      radii: impact.radii || { total: 0, severe: 0, moderate: 0, light: 0 }
+    };
+  }
+  
+  const { consequences, historical, summary, impactType, energy, radii } = normalizedImpact;
 
   return (
     <div className="glass" style={{
@@ -192,22 +259,40 @@ export default function ImpactConsequences({ impact, show = true }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.85em' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#ff6b6b' }}>● Destrucción Total</span>
-            <strong>{impact.radii.total.toFixed(2)} km</strong>
+            <strong>{radii.total.toFixed(2)} km</strong>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#ff9800' }}>● Daño Severo</span>
-            <strong>{impact.radii.severe.toFixed(2)} km</strong>
-          </div>
+          {radii.severe !== undefined && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#ff9800' }}>● Daño Severo</span>
+              <strong>{radii.severe.toFixed(2)} km</strong>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#ffc107' }}>● Daño Moderado</span>
-            <strong>{impact.radii.moderate.toFixed(2)} km</strong>
+            <strong>{radii.moderate.toFixed(2)} km</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#4caf50' }}>● Daño Leve</span>
-            <strong>{impact.radii.light.toFixed(2)} km</strong>
+            <strong>{radii.light.toFixed(2)} km</strong>
           </div>
         </div>
       </div>
+
+      {/* Indicador de fuente de datos */}
+      {isBackend && (
+        <div style={{
+          background: 'rgba(102, 126, 234, 0.2)',
+          border: '1px solid rgba(102, 126, 234, 0.5)',
+          borderRadius: 6,
+          padding: 8,
+          marginBottom: 12,
+          fontSize: '0.75em',
+          color: '#4fc3f7',
+          textAlign: 'center'
+        }}>
+          🛰️ Datos calculados por Backend (NASA Models)
+        </div>
+      )}
 
       {/* Efectos climáticos de larga duración */}
       {consequences.atmospheric.coolingYears > 0 && (
@@ -305,4 +390,22 @@ function formatPopulation(num) {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
   return num.toString();
+}
+
+/**
+ * Determina la severidad del impacto basado en la energía
+ * @param {object} energy - Objeto con kilotons, megatons, etc.
+ * @returns {string} - Nivel de severidad
+ */
+function determineSeverity(energy) {
+  if (!energy || !energy.kilotons) return 'DESCONOCIDO';
+  
+  const kt = energy.kilotons;
+  
+  if (kt >= 100000) return 'EXTINCIÓN MASIVA';
+  if (kt >= 10000) return 'CATASTRÓFICO';
+  if (kt >= 1000) return 'SEVERO';
+  if (kt >= 100) return 'MODERADO';
+  if (kt >= 10) return 'BAJO';
+  return 'MÍNIMO';
 }

@@ -12,6 +12,13 @@ import {
   calculateFullImpact,
   compareWithHistory 
 } from '../utils/impactCalculations';
+import { 
+  checkHealth,
+  getNearEarthAsteroids,
+  simulateImpact,
+  createImpactLocation,
+  guessTargetType 
+} from '../services/impactAPI';
 
 const Simulacion = () => {
   const [params, setParams] = useState({
@@ -31,10 +38,17 @@ const Simulacion = () => {
   const [awaitingTarget, setAwaitingTarget] = useState(false);
   const earthRef = useRef();
   const idRef = useRef(0);
+  const craterIdCounter = useRef(0); // Contador para IDs únicos de cráteres
   const [neos, setNeos] = useState([]);
   const [neosLoading, setNeosLoading] = useState(false);
   const [neosError, setNeosError] = useState(null);
   const [neoFilter, setNeoFilter] = useState('all'); // 'all', 'hazardous', 'historical'
+
+  // Generador de IDs únicos para cráteres
+  const generateCraterId = () => {
+    craterIdCounter.current += 1;
+    return `crater-${craterIdCounter.current}-${Date.now()}`;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -137,28 +151,68 @@ const Simulacion = () => {
   // Cargar la API de NEO de la NASA al montar
   useEffect(() => {
     let mounted = true;
-    const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
-    const feedUrl = `https://api.nasa.gov/neo/rest/v1/feed?api_key=${API_KEY}`;
+    
     async function load() {
       setNeosLoading(true);
       setNeosError(null);
+      
       try {
-        const res = await fetch(feedUrl);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        // data.near_earth_objects es un objeto por fecha; aplastamos a array
-        const neosArray = [];
-        Object.values(data.near_earth_objects || {}).forEach(dayList => {
-          dayList.forEach(item => neosArray.push(item));
+        // ============================================================================
+        // OPCIÓN 1: Usar API Backend (recomendado - datos procesados y enriquecidos)
+        // ============================================================================
+        console.log('[simulacion] 🚀 Cargando NEOs desde backend...');
+        
+        // Health check primero
+        try {
+          const health = await checkHealth();
+          console.log('[simulacion] ✅ Backend health:', health);
+        } catch (healthErr) {
+          console.warn('[simulacion] ⚠️ Backend health check failed, continuando...', healthErr);
+        }
+        
+        // Obtener asteroides desde el backend
+        const neosArray = await getNearEarthAsteroids({
+          // Opcional: puedes filtrar por fechas
+          // startDate: '2025-10-01',
+          // endDate: '2025-10-08',
+          hazardousOnly: false // false = todos, true = solo peligrosos
         });
+        
+        console.log('[simulacion] ✅ NEOs cargados desde backend:', neosArray.length);
+        
         if (mounted) setNeos(neosArray);
-      } catch (err) {
-        console.error('[simulacion] failed to load NEOs', err);
-        if (mounted) setNeosError(err.message || String(err));
+        
+        // ============================================================================
+        // OPCIÓN 2: Fallback a NASA directamente (si el backend falla)
+        // ============================================================================
+      } catch (backendError) {
+        console.warn('[simulacion] ⚠️ Backend failed, usando NASA directamente:', backendError);
+        
+        try {
+          const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
+          const feedUrl = `https://api.nasa.gov/neo/rest/v1/feed?api_key=${API_KEY}`;
+          
+          const res = await fetch(feedUrl);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          
+          // data.near_earth_objects es un objeto por fecha; aplastamos a array
+          const neosArray = [];
+          Object.values(data.near_earth_objects || {}).forEach(dayList => {
+            dayList.forEach(item => neosArray.push(item));
+          });
+          
+          console.log('[simulacion] ✅ NEOs cargados desde NASA directamente:', neosArray.length);
+          if (mounted) setNeos(neosArray);
+        } catch (nasaError) {
+          console.error('[simulacion] ❌ También falló NASA directa:', nasaError);
+          if (mounted) setNeosError(nasaError.message || String(nasaError));
+        }
       } finally {
         if (mounted) setNeosLoading(false);
       }
     }
+    
     load();
     return () => { mounted = false };
   }, []);
@@ -251,7 +305,7 @@ const Simulacion = () => {
     setAwaitingTarget(false);
   }, [awaitingTarget, params.velocidad]);
 
-  const handleAsteroidHit = (target, data) => {
+  const handleAsteroidHit = async (target, data) => {
     console.log('Impact at', target, data);
     
     // === CÁLCULO CRÁTER USANDO craterCalculator (ver objeto documentado arriba) ===
@@ -275,14 +329,82 @@ const Simulacion = () => {
     
     console.log('[simulacion] Impact coordinates:', { lat: lat.toFixed(2), lng: lng.toFixed(2) });
 
-    // === ANÁLISIS COMPLETO DE IMPACTO (SISTEMA NASA) ===
-    const fullAnalysis = calculateFullImpact({
-      diameter: finalDiameter_m, // diámetro del cráter en metros
-      velocity: km_s, // velocidad en km/s
-      density: data?.densidad || 2500, // densidad del asteroide
-      lat,
-      lng
-    });
+    // ============================================================================
+    // === SIMULACIÓN DE IMPACTO CON API BACKEND (NUEVO) ===
+    // ============================================================================
+    let fullAnalysis = null;
+    let backendSimulation = null;
+    
+    try {
+      console.log('[simulacion] 🚀 Solicitando simulación de impacto al backend...');
+      
+      // Determinar tipo de objetivo (tierra o agua)
+      const targetType = guessTargetType(lat, lng);
+      
+      // Llamar a la API de simulación
+      backendSimulation = await simulateImpact({
+        diameter_m: finalDiameter_m,
+        velocity_km_s: km_s,
+        impact_location: createImpactLocation(lat, lng),
+        target_type: targetType,
+        density: data?.densidad || 2500,
+        angle: data?.angulo || 45
+      });
+      
+      console.log('[simulacion] ✅ Simulación backend exitosa:', backendSimulation);
+      
+      // Usar los resultados del backend si están disponibles
+      if (backendSimulation && backendSimulation.impact_effects) {
+        fullAnalysis = {
+          ...backendSimulation.impact_effects,
+          // Agregar metadatos
+          _source: 'backend',
+          _backendData: backendSimulation
+        };
+      }
+    } catch (backendError) {
+      console.warn('[simulacion] ⚠️ Backend simulation failed, usando cálculo local:', backendError);
+    }
+    
+    // Si el backend falló o no devolvió resultados, usar cálculo local
+    if (!fullAnalysis) {
+      try {
+        console.log('[simulacion] 📊 Calculando impacto localmente...');
+        
+        // Fallback: usar cálculo local original
+        fullAnalysis = calculateFullImpact({
+          diameter: finalDiameter_m, // diámetro del cráter en metros
+          velocity: km_s, // velocidad en km/s
+          density: data?.densidad || 2500, // densidad del asteroide
+          lat,
+          lng
+        });
+        
+        if (fullAnalysis) {
+          fullAnalysis._source = 'local';
+          console.log('[simulacion] ✅ Cálculo local exitoso');
+        }
+      } catch (localError) {
+        console.error('[simulacion] ❌ Error en cálculo local:', localError);
+        
+        // Último fallback: crear estructura mínima válida
+        fullAnalysis = {
+          energy: {
+            kilotons: energyJ / (4.184e12),
+            megatons: energyJ / (4.184e15),
+            hiroshimasEquivalent: energyJ / (6.3e13)
+          },
+          radii: {
+            total: radius * KM_PER_UNIT,
+            moderate: radius * KM_PER_UNIT * 2,
+            light: radius * KM_PER_UNIT * 4
+          },
+          _source: 'fallback',
+          _error: localError.message
+        };
+        console.warn('[simulacion] ⚠️ Usando valores fallback básicos');
+      }
+    }
     
     console.log('[simulacion] Full Impact Analysis:', fullAnalysis);
     setFullImpactAnalysis(fullAnalysis);
@@ -325,12 +447,20 @@ const Simulacion = () => {
     
     // Guardamos también todos los datos físicos calculados para poder usarlos en la visualización (p.ej. tooltips)
     const crater = { 
-      id: Date.now(), 
+      id: generateCraterId(), // Usar generador de IDs únicos en lugar de Date.now()
       localPosition, 
       radius, 
       depth: radius * 0.25, 
       colorScheme, 
-      data: { craterData, masa, speedScene, fullAnalysis, lat, lng } 
+      data: { 
+        craterData, 
+        masa, 
+        speedScene, 
+        fullAnalysis, 
+        backendSimulation, 
+        lat, 
+        lng 
+      } 
     };
     setCraters(c => [...c, crater]);
     setAsteroids([]);
@@ -338,7 +468,7 @@ const Simulacion = () => {
     
     // Debug helper: si está activo, añadir un marcador temporal en la escena para ver el punto de impacto
     if (showHelpers) {
-      const markerId = `m-${Date.now()}`;
+      const markerId = generateCraterId(); // Usar generador de IDs únicos
       const marker = { id: markerId, position: finalPos.clone(), ttl: Date.now() + 3000 };
       // guardamos como un cráter temporal usando radius muy pequeño pero distinto color
       setCraters(c => [...c, { id: markerId, position: finalPos.clone(), radius: Math.max(radius*0.3, 0.01), depth: 0, colorScheme: 'amarillo', _temporary: true, data: { isMarker:true } }]);
@@ -348,17 +478,18 @@ const Simulacion = () => {
       }, 3000);
     }
     
-    // Preparar datos legacy para el HUD (compatibilidad)
-    const kilotons = fullAnalysis.energy.kilotons;
-    const total = fullAnalysis.radii.total;
-    const moderate = fullAnalysis.radii.moderate;
-    const light = fullAnalysis.radii.light;
+    // Preparar datos legacy para el HUD (compatibilidad) - NULL-SAFE
+    const kilotons = fullAnalysis?.energy?.kilotons || (energyJ / (4.184e12));
+    const total = fullAnalysis?.radii?.total || 0;
+    const moderate = fullAnalysis?.radii?.moderate || 0;
+    const light = fullAnalysis?.radii?.light || 0;
     
     setLastImpact({ 
       position: target.clone(), 
       data, 
       stats: { kilotons, total, moderate, light },
       fullAnalysis,
+      backendSimulation,
       lat,
       lng
     });
