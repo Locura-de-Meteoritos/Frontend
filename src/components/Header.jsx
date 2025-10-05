@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import img1 from '../assets/LOGO METEOR MADNESS.png';
+import boleeuImg from '../assets/Boleeuu.png';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -23,12 +24,13 @@ const Header = () => {
               Impactos ambientales
             </Link>
           </div>
-          <button
+          <img
+            src={boleeuImg}
+            alt="Comenzar"
             onClick={() => navigate('/simulacion')}
-            className="bg-white text-black px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Comenzar
-          </button>
+            className="h-10 w-auto cursor-pointer hover:scale-110 transition-transform duration-200"
+            style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }}
+          />
         </div>
       </div>
     </nav>
