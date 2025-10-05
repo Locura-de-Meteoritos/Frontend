@@ -9,7 +9,7 @@ const Hero = () => {
           playsInline
           preload="auto"
           className="w-full h-full object-cover"
-          style={{ opacity: 0.7 }}
+          style={{ opacity: 0.5 }}
         >
           <source src="/Videos/blackhole.webm" type="video/webm" />
         </video>

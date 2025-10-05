@@ -9,15 +9,21 @@ const Header = () => {
     <nav className="glass border-b border-transparent relative z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-6">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-1">
             <img src={img1} alt="Logo" className="h-15 w-auto object-contain" />
             <h1 className="text-xl font-semibold text-white">Locura de Meteoritos</h1>
           </Link>
-          <div className="hidden md:flex space-x-8">
-            <Link to="/" className="text-gray-200 hover:text-white transition-colors">
+          <div className="hidden md:flex items-center justify-center space-x-9">
+            <Link 
+              to="/" 
+              className="text-gray-200 hover:text-white transition-all duration-300 hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] font-medium"
+            >
               Inicio
             </Link>
-            <Link to="/asteroides" className="text-gray-200 hover:text-white transition-colors">
+            <Link 
+              to="/asteroides" 
+              className="text-gray-200 hover:text-white transition-all duration-300 hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] font-medium"
+            >
               Asteroides
             </Link>
           </div>
