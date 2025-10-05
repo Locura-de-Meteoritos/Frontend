@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
+import Crater from './Crater';
 
 // ============================================================================
 // HOOK PERSONALIZADO: Carga de texturas de la Tierra (4K)
@@ -131,6 +132,7 @@ export default function Earth3D({
     const earthMesh = new THREE.Mesh(earthGeo, earthMat);
     earthMesh.position.set(0, planetOffsetY, 0);
     earthMesh.name = 'EarthNASA';
+    earthMesh.renderOrder = 0; // Tierra se dibuja primero
     earthMeshRef.current = earthMesh;
     group.add(earthMesh);
     
@@ -150,7 +152,7 @@ export default function Earth3D({
       const cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
       cloudsMesh.name = 'CloudsNASA';
       cloudsMesh.position.set(0, planetOffsetY, 0);
-      cloudsMesh.renderOrder = 999;
+      cloudsMesh.renderOrder = 999; // Nubes después de la Tierra pero antes de atmósfera
       cloudsRef.current = cloudsMesh;
       group.add(cloudsMesh);
     }
@@ -211,13 +213,14 @@ export default function Earth3D({
         transparent: true,
         side: THREE.BackSide,
         blending: THREE.AdditiveBlending,
-        depthWrite: false
+        depthWrite: false,
+        depthTest: true
       });
       
       const atmosphereMesh = new THREE.Mesh(atmosphereGeo, atmosphereMat);
       atmosphereMesh.name = 'EarthAtmosphere';
       atmosphereMesh.position.set(0, planetOffsetY, 0);
-      atmosphereMesh.renderOrder = 1000;
+      atmosphereMesh.renderOrder = 1000; // Atmósfera se dibuja AL FINAL (encima de todo)
       atmosphereRef.current = atmosphereMesh;
       group.add(atmosphereMesh);
     }
@@ -347,6 +350,45 @@ export default function Earth3D({
     <group ref={groupRef} onPointerDown={onPointerDown}>
       {/* Grupo principal del planeta */}
       {planetGroup.current && <primitive object={planetGroup.current} />}
+      
+      {/* ====== CRÁTERES 3D ====== */}
+      {/* 
+        🎛️ AJUSTE DE POSICIÓN DE CRÁTERES:
+        Para ajustar la profundidad de TODOS los cráteres, modifica el valor por defecto abajo.
+        - planetRadius actual: ~6.371 unidades (escala realista 1u = 1000km)
+        - Los cráteres deben estar SOBRE la superficie sólida (no dentro ni con la atmósfera)
+        - Valores recomendados: entre 0.001 y 0.02
+        - Si los cráteres se mezclan con la atmósfera: aumenta el valor (0.01, 0.02, 0.03...)
+        - Si los cráteres flotan mucho: reduce el valor (0.001, 0.005...)
+        
+        ⚠️ IMPORTANTE - SINCRONIZACIÓN CON SIMULACION.JSX:
+        El planetOffsetY DEBE coincidir con el valor en simulacion.jsx.
+        En simulacion.jsx: planetOffsetY = -0.2 * planetRadius
+        Aquí por defecto: planetOffsetY = -0.4
+        ¡Asegúrate de pasar el MISMO valor para evitar desalineación!
+        
+        📊 ORDEN DE RENDERIZADO (de atrás hacia adelante):
+        0. Tierra (superficie sólida) - renderOrder: 0
+        1. Cráteres (sobre la superficie) - renderOrder: 8-10 + depthOffset positivo
+        2. Nubes (capa atmosférica baja) - renderOrder: 999
+        3. Atmósfera (glow exterior) - renderOrder: 1000
+        
+        Los cráteres DEBEN tener renderOrder MENOR que la atmósfera (1000)
+        Y depthOffset POSITIVO para elevarse sobre la superficie sólida.
+      */}
+      {craters && craters.length > 0 && craters.map((c, i) => (
+        <Crater
+          key={c.id || i}
+          localPosition={c.localPosition}
+          position={c.position}
+          radius={c.radius}
+          depth={c.depth}
+          planetRadius={planetRadius}
+          planetOffsetY={planetOffsetY}
+          data={c.data}
+          depthOffset={c.depthOffset !== undefined ? c.depthOffset : 0.01}
+        />
+      ))}
       
       {/* ====== SISTEMA DE ILUMINACIÓN REALISTA ====== */}
       

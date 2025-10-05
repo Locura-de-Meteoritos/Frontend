@@ -320,10 +320,13 @@ const Simulacion = () => {
     if (t === 'Hierro') colorScheme = 'gris';
     else if (t === 'Mixto') colorScheme = 'amarillo';
     
+    // Calcular localPosition (sin el offset de la Tierra para renderizado correcto)
+    const localPosition = finalPos.clone().sub(new THREE.Vector3(0, planetOffsetY, 0));
+    
     // Guardamos también todos los datos físicos calculados para poder usarlos en la visualización (p.ej. tooltips)
     const crater = { 
       id: Date.now(), 
-      position: finalPos, 
+      localPosition, // Usar localPosition en lugar de position
       radius, 
       depth: radius * 0.25, 
       colorScheme, 
