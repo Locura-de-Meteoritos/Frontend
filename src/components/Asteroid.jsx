@@ -7,41 +7,100 @@ import * as THREE from 'three'
 // Crea formas rocosas aleatorias usando deformación de esfera base
 // ============================================================================
 function createAsteroidGeometry(seed = Math.random()) {
-  // OPTIMIZACIÓN: Reducir segmentos de 64 a 32 (reduce 75% de polígonos)
-  const geometry = new THREE.SphereGeometry(1, 32, 32); // Era 64x64, ahora 32x32
+  // BASE GEOMETRÍA: Mantener 32x32 para balance rendimiento/forma
+  const geometry = new THREE.SphereGeometry(1, 32, 32);
   const positions = geometry.attributes.position;
-  
-  // Usar seed para generar números pseudo-aleatorios consistentes
-  const random = (min, max) => {
+  const vertexCount = positions.count;
+
+  // Atributo de color por vértice para variación visual
+  const colors = new Float32Array(vertexCount * 3);
+
+  // PRNG simple basado en seed
+  const rand = () => {
     seed = (seed * 9301 + 49297) % 233280;
-    return min + (seed / 233280) * (max - min);
+    return seed / 233280;
   };
-  
-  // OPTIMIZACIÓN: Simplificar deformación (menos capas de ruido)
-  for (let i = 0; i < positions.count; i++) {
+
+  // Parámetros de deformación (ajustables)
+  const highFreqAmp = 0.06; // detalles pequeños
+  const midFreqAmp = 0.12;  // rugosidad general
+  const lowFreqAmp = 0.18;  // deformación global
+
+  // Crear una lista de cráteres procedurales (pos angulares + radio)
+  const craterCount = Math.floor(3 + rand() * 6); // entre 3 y 8 cráteres por asteroide
+  const craters = [];
+  for (let c = 0; c < craterCount; c++) {
+    craters.push({
+      angle: rand() * Math.PI * 2,
+      radius: 0.05 + rand() * 0.25, // tamaño relativo al radio base
+      depth: 0.03 + rand() * 0.12,
+      xOff: (rand() - 0.5) * 0.6,
+      yOff: (rand() - 0.5) * 0.6
+    });
+  }
+
+  // Recorrer vértices y aplicar deformaciones
+  for (let i = 0; i < vertexCount; i++) {
     const x = positions.getX(i);
     const y = positions.getY(i);
     const z = positions.getZ(i);
-    
-    const length = Math.sqrt(x * x + y * y + z * z);
-    
-    // Solo 2 capas de ruido en lugar de 5
-    const noise1 = Math.sin(x * 1.2 + seed) * Math.cos(y * 1.4 + seed) * 0.05;
-    const lowFreqNoise = Math.sin(x * 0.7 + seed) * Math.cos(y * 0.8 + seed) * 0.08;
-    
-    const deformation = 1 + noise1 + lowFreqNoise;
-    
-    positions.setXYZ(
-      i,
-      (x / length) * deformation,
-      (y / length) * deformation,
-      (z / length) * deformation
-    );
+
+    const length = Math.sqrt(x * x + y * y + z * z) || 1;
+    // Coordenadas esféricas aproximadas
+    const nx = x / length;
+    const ny = y / length;
+    const nz = z / length;
+
+    // Coordenada polar para ruido coherente
+    const theta = Math.atan2(ny, nx);
+    const phi = Math.acos(nz);
+
+    // Capas de ruido: baja frecuencia (grande), media, alta (detalle)
+    const low = Math.sin(phi * 1.2 + seed * 0.5) * lowFreqAmp * (0.8 + rand() * 0.4);
+    const mid = Math.sin(theta * 3.5 + seed * 1.7) * midFreqAmp * (0.8 + rand() * 0.6);
+    const high = (Math.sin(nx * 12 + ny * 9 + seed * 7) + Math.cos(nz * 14 + seed * 3)) * 0.5 * highFreqAmp;
+
+    let deformation = 1 + low + mid + high;
+
+    // Aplicar cráteres: si el vértice está cerca del centro del cráter, hundirlo
+    for (let c = 0; c < craters.length; c++) {
+      const crater = craters[c];
+      // Proyectar coordenada bidimensional aproximada en esfera para testar distancia
+      const cx = Math.cos(crater.angle) * crater.xOff;
+      const cy = Math.sin(crater.angle) * crater.yOff;
+      const dx = nx - cx;
+      const dy = ny - cy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < crater.radius) {
+        // perfil de cráter: suave depresión
+        const t = 1 - (d / crater.radius);
+        const craterEffect = -Math.pow(t, 1.2) * crater.depth;
+        deformation += craterEffect;
+      }
+    }
+
+    // Limitar deformación para evitar artefactos
+    deformation = Math.max(0.55, Math.min(1.6, deformation));
+
+    positions.setXYZ(i, (x / length) * deformation, (y / length) * deformation, (z / length) * deformation);
+
+    // Color por vértice: mezcla entre tonos rocosos y metálicos según rand y normal
+    const v = 0.5 + 0.5 * rand();
+    const r = THREE.MathUtils.lerp(0.45, 0.9, v); // rojo/marrón
+    const g = THREE.MathUtils.lerp(0.35, 0.9, v * 0.8);
+    const b = THREE.MathUtils.lerp(0.25, 0.6, v * 0.5);
+    colors[i * 3] = r;
+    colors[i * 3 + 1] = g;
+    colors[i * 3 + 2] = b;
   }
-  
-  // Recalcular normales para iluminación correcta
+
+  // Añadir atributo de color a la geometría
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  // Recalcular normales y actualizar bounding
   geometry.computeVertexNormals();
-  
+  geometry.computeBoundingSphere();
+
   return geometry;
 }
 
@@ -163,9 +222,11 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
         {/* Geometría irregular generada proceduralmente */}
         <primitive object={asteroidGeometry} attach="geometry" />
         <meshStandardMaterial 
+          // Usar colores por vértice si existen
+          vertexColors={true}
           color={tipoColor} 
           emissive={emissiveColor} 
-          emissiveIntensity={0.9} 
+          emissiveIntensity={0.55} 
           metalness={metalness} 
           roughness={roughness}
           flatShading={false} // Shading suave para mejor apariencia
