@@ -1,8 +1,10 @@
 import Spline from '@splinetool/react-spline'
+import ChatAgent from './ChatAgent.jsx'
 const Body = () => {
   const handleSimulationClick = () => {
     window.location.href = "/simulacion";
   };
+  const apiKey = import.meta.env.VITE_MISTRAL_API_KEY
 
   return (
     <>
@@ -84,7 +86,7 @@ const Body = () => {
           </div>
         </div>
       </section> */}
-
+      <ChatAgent apiKey={apiKey} />
       
     </>
   );
