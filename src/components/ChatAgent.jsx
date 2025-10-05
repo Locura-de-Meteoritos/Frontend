@@ -1,48 +1,48 @@
 // src/components/ChatAgent.jsx
 import { useState } from 'react'
 
-// Función para convertir Markdown a HTML
+// Function to convert Markdown to HTML
 function FormatMarkdown(text) {
   let formatted = text
   
-  // Encabezados (deben procesarse primero, línea por línea)
+  // Headers (must be processed first, line by line)
   formatted = formatted.replace(/^### (.+)$/gm, '<h3 class="text-base font-bold mt-3 mb-1">$1</h3>')
   formatted = formatted.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold mt-4 mb-2">$1</h2>')
   formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-4 mb-2">$1</h1>')
   
-  // Bloques de código (```código```)
+  // Code blocks (```code```)
   formatted = formatted.replace(/```(\w+)?\n([\s\S]+?)```/g, '<pre class="bg-gray-800 text-gray-100 p-3 rounded-lg my-2 overflow-x-auto"><code>$2</code></pre>')
   
-  // Negritas: **texto** o __texto__
+  // Bold: **text** or __text__
   formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>')
   formatted = formatted.replace(/__(.+?)__/g, '<strong class="font-bold">$1</strong>')
   
-  // Cursivas: *texto* o _texto_
+  // Italic: *text* or _text_
   formatted = formatted.replace(/\*([^*\s][^*]*?[^*\s])\*/g, '<em class="italic">$1</em>')
   formatted = formatted.replace(/_([^_\s][^_]*?[^_\s])_/g, '<em class="italic">$1</em>')
   
-  // Código inline: `código`
+  // Inline code: `code`
   formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>')
   
-  // Listas numeradas
+  // Numbered lists
   formatted = formatted.replace(/^\d+\.\s+(.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
   
-  // Listas con viñetas
+  // Bullet lists
   formatted = formatted.replace(/^\s*[-*+]\s+(.+)$/gm, '<li class="ml-4">• $1</li>')
   
-  // Links [texto](url)
+  // Links [text](url)
   formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
   
-  // Citas > texto
+  // Quotes > text
   formatted = formatted.replace(/^>\s+(.+)$/gm, '<blockquote class="border-l-4 border-gray-300 pl-3 italic text-gray-600">$1</blockquote>')
   
-  // Líneas horizontales (---, ***, ___)
+  // Horizontal lines (---, ***, ___)
   formatted = formatted.replace(/^(---|\*\*\*|___)$/gm, '<hr class="my-3 border-gray-300" />')
   
-  // Saltos de línea dobles para párrafos
+  // Double line breaks for paragraphs
   formatted = formatted.replace(/\n\n+/g, '<br /><br />')
   
-  // Saltos de línea simples
+  // Single line breaks
   formatted = formatted.replace(/\n/g, '<br />')
   
   return `<div>${formatted}</div>`
@@ -55,7 +55,7 @@ export default function ChatAgent({ apiKey }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // ID del agente entrenado
+  // Trained agent ID
   const AGENT_ID = 'ag:63df4435:20251004:untitled-agent:5a96c43c'
 
   async function handleSubmit(e) {
@@ -93,12 +93,12 @@ export default function ChatAgent({ apiKey }) {
       }
 
       const data = await res.json()
-      const text = data.choices?.[0]?.message?.content || 'Sin respuesta'
+      const text = data.choices?.[0]?.message?.content || 'No response'
 
       setMessages(prev => [...prev, { role: 'assistant', content: text }])
     } catch (err) {
       setError(err.message)
-      console.error('Error al comunicarse con el agente:', err)
+      console.error('Error communicating with agent:', err)
     } finally {
       setIsLoading(false)
     }
@@ -106,11 +106,11 @@ export default function ChatAgent({ apiKey }) {
 
   return (
     <>
-      {/* Botón flotante */}
+      {/* Floating button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 flex items-center justify-center group z-50"
-        aria-label="Abrir chat"
+        aria-label="Open chat"
       >
         {isOpen ? (
           <svg className="w-8 h-8 transition-transform group-hover:rotate-90 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +123,7 @@ export default function ChatAgent({ apiKey }) {
         )}
       </button>
 
-      {/* Ventana del chat */}
+      {/* Chat window */}
       <div
         className={`fixed bottom-24 right-6 w-96 h-[32rem] bg-white rounded-2xl shadow-2xl transform transition-all duration-300 z-50 ${
           isOpen ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'
@@ -139,7 +139,7 @@ export default function ChatAgent({ apiKey }) {
             </div>
             <div>
               <h3 className="font-semibold text-lg">🌠 Meteor Madness AI</h3>
-              <p className="text-xs text-white/80">Experto en asteroides y meteoritos</p>
+              <p className="text-xs text-white/80">Expert in asteroids and meteorites</p>
             </div>
           </div>
           <button
@@ -152,15 +152,15 @@ export default function ChatAgent({ apiKey }) {
           </button>
         </div>
 
-        {/* Mensajes */}
+        {/* Messages */}
         <div className="h-[calc(100%-8rem)] overflow-y-auto p-4 space-y-4 bg-gray-50">
           {messages.length === 0 && (
             <div className="text-center text-gray-500 mt-20">
               <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="text-sm font-medium">¡Hola! Soy tu asistente experto en asteroides 🌠</p>
-              <p className="text-xs text-gray-400 mt-2">Pregúntame sobre meteoritos, impactos, NEOs y más</p>
+              <p className="text-sm font-medium">Hello! I&apos;m your expert asteroid assistant 🌠</p>
+              <p className="text-xs text-gray-400 mt-2">Ask me about meteorites, impacts, NEOs and more</p>
             </div>
           )}
 
@@ -214,8 +214,8 @@ export default function ChatAgent({ apiKey }) {
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Escribe tu mensaje..."
-              className="flex-1 px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+              placeholder="Type your message..."
+              className="flex-1 px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-900 placeholder:text-gray-400"
               disabled={isLoading}
             />
             <button
