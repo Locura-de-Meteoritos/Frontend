@@ -371,13 +371,13 @@ const Simulacion = () => {
       </div>
       <Header />
 
-      {/* Panel lateral */}
-      <aside style={{ position: 'absolute', left: 16, top: 96, width: 320, zIndex: 40, background: 'rgba(255,255,255,0.95)', padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
-        <h3 className="text-lg font-semibold mb-4">Configurar Asteroide</h3>
+      {/* Panel lateral con estilo glass */}
+      <aside className="glass" style={{ position: 'absolute', left: 16, top: 96, width: 320, zIndex: 40, padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
+        <h3 className="text-lg font-semibold mb-4 text-white">Configurar Asteroide</h3>
 
         {/* --- NEO Catalog --- */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6 }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6, color: '#fff' }}>
             🎯 Catálogo NEO (NASA)
           </div>
           
@@ -427,10 +427,10 @@ const Simulacion = () => {
             </button>
           </div>
 
-          {neosLoading && <div style={{ fontSize: '0.85rem', color: '#666' }}>Cargando NEOs...</div>}
-          {neosError && <div style={{ fontSize: '0.85rem', color: 'crimson' }}>Error: {neosError}</div>}
+          {neosLoading && <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Cargando NEOs...</div>}
+          {neosError && <div style={{ fontSize: '0.85rem', color: '#ff6b6b' }}>Error: {neosError}</div>}
           {!neosLoading && !neosError && neos && neos.length > 0 && (
-            <div style={{ maxHeight: 140, overflowY: 'auto', padding: 6, borderRadius: 6, background: 'rgba(0,0,0,0.03)' }}>
+            <div style={{ maxHeight: 140, overflowY: 'auto', padding: 6, borderRadius: 6, background: 'rgba(255,255,255,0.1)' }}>
               {neos.slice(0,8).map((n, i) => {
                 const estDia = n.estimated_diameter?.meters?.estimated_diameter_max || n.estimated_diameter?.meters?.estimated_diameter_min || 50;
                 const velo = n.close_approach_data && n.close_approach_data[0] ? Number(n.close_approach_data[0].relative_velocity.kilometers_per_second) : 20;
@@ -456,7 +456,7 @@ const Simulacion = () => {
                         {isHistorical && <span>📜</span>}
                         <span style={{ fontSize: '0.8rem' }}>{n.name}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#e0e0e0' }}>
                         {(estDia).toFixed(0)} m • {velo.toFixed(1)} km/s
                         {n.close_approach_data && n.close_approach_data[0] && (
                           <> • {n.close_approach_data[0].close_approach_date}</>
@@ -479,7 +479,7 @@ const Simulacion = () => {
                         const kmps = velo; // we computed km/s
                         const velocidadSlider = Math.min(100, Math.max(1, Math.round((kmps / 70) * 100)));
                         setParams(p => ({ ...p, masa: masaEst, velocidad: velocidadSlider, densidad: asumDens, tipo: 'Mixto' }));
-                      }} style={{ padding: '6px 8px', borderRadius: 6, background: '#222', color: '#fff', border: 'none', fontSize: '0.75rem', cursor: 'pointer' }}>Usar</button>
+                      }} style={{ padding: '6px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.9)', color: '#000', border: 'none', fontSize: '0.75rem', cursor: 'pointer' }} className="hover:bg-white transition-colors">Usar</button>
                     </div>
                   </div>
                 )
@@ -489,46 +489,46 @@ const Simulacion = () => {
         </div>
 
         {/* Predicción del cráter con parámetros actuales */}
-        <div style={{ marginBottom: 12, padding: 8, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 6 }}>Predicción del cráter</div>
-          <div style={{ fontSize: '0.85rem', color: '#333' }}>Diámetro físico: <strong>{(previewCrater.D_final/1000).toFixed(2)}</strong> km</div>
-          <div style={{ fontSize: '0.85rem', color: '#333' }}>Energía: <strong>{(previewCrater.energyJ / (4.184e12)).toFixed(2)}</strong> kt</div>
-          <div style={{ fontSize: '0.85rem', color: '#333' }}>Radio visual (escena): <strong>{previewCrater.radiusFinal.toFixed(3)}</strong> u</div>
+        <div style={{ marginBottom: 12, padding: 8, borderRadius: 8, background: 'rgba(255,255,255,0.1)' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 6, color: '#fff' }}>Predicción del cráter</div>
+          <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Diámetro físico: <strong className="text-white">{(previewCrater.D_final/1000).toFixed(2)}</strong> km</div>
+          <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Energía: <strong className="text-white">{(previewCrater.energyJ / (4.184e12)).toFixed(2)}</strong> kt</div>
+          <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Radio visual (escena): <strong className="text-white">{previewCrater.radiusFinal.toFixed(3)}</strong> u</div>
         </div>
 
-        <label className="block mb-2">Tipo</label>
-        <select name="tipo" value={params.tipo} onChange={handleChange} className="w-full mb-3 p-2 border rounded">
-          <option>Roca</option>
-          <option>Hierro</option>
-          <option>Mixto</option>
+        <label className="block mb-2 text-white">Tipo</label>
+        <select name="tipo" value={params.tipo} onChange={handleChange} className="w-full mb-3 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm">
+          <option className="bg-gray-800">Roca</option>
+          <option className="bg-gray-800">Hierro</option>
+          <option className="bg-gray-800">Mixto</option>
         </select>
 
-        <label className="block mb-2">Masa (kg)</label>
-        <input name="masa" type="number" value={params.masa} onChange={handleChange} className="w-full mb-3 p-2 border rounded" />
+        <label className="block mb-2 text-white">Masa (kg)</label>
+        <input name="masa" type="number" value={params.masa} onChange={handleChange} className="w-full mb-3 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm" />
 
-        <label className="block mb-1">Velocidad (relativa 1-100)</label>
+        <label className="block mb-1 text-white">Velocidad (relativa 1-100)</label>
         <input name="velocidad" type="range" min="1" max="100" value={params.velocidad} onChange={handleChange} className="w-full mb-1" />
         <div className="flex items-center gap-2 mb-2">
-          <input name="velocidad" type="number" min="1" max="100" value={params.velocidad} onChange={handleChange} className="w-24 p-2 border rounded" />
-          <span style={{fontSize:'0.75rem', color:'#555'}}>Vel. interna (u/s aprox): {(((Number(params.velocidad)||20)/100)*1.8+0.2).toFixed(2)}</span>
+          <input name="velocidad" type="number" min="1" max="100" value={params.velocidad} onChange={handleChange} className="w-24 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm" />
+          <span style={{fontSize:'0.75rem', color:'#e0e0e0'}}>Vel. interna (u/s aprox): {(((Number(params.velocidad)||20)/100)*1.8+0.2).toFixed(2)}</span>
         </div>
 
-        <label className="block mb-2">Densidad (kg/m³)</label>
-        <input name="densidad" type="number" value={params.densidad} onChange={handleChange} className="w-full mb-3 p-2 border rounded" />
+        <label className="block mb-2 text-white">Densidad (kg/m³)</label>
+        <input name="densidad" type="number" value={params.densidad} onChange={handleChange} className="w-full mb-3 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm" />
 
-        <label className="block mb-2">Ángulo (°)</label>
-        <input name="angulo" type="number" value={params.angulo} onChange={handleChange} className="w-full mb-3 p-2 border rounded" />
+        <label className="block mb-2 text-white">Ángulo (°)</label>
+        <input name="angulo" type="number" value={params.angulo} onChange={handleChange} className="w-full mb-3 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm" />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <input id="helpers" type="checkbox" checked={showHelpers} onChange={(e) => setShowHelpers(e.target.checked)} />
-          <label htmlFor="helpers">Mostrar helpers (debug)</label>
+          <label htmlFor="helpers" className="text-white">Mostrar helpers (debug)</label>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={handleSimulate} style={{ flex: 1, padding: '10px 12px', background: '#111', color: '#fff', borderRadius: 8 }}>
+          <button onClick={handleSimulate} style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.9)', color: '#000', borderRadius: 8, fontWeight: 600 }} className="hover:bg-white transition-colors">
             Simular impacto
           </button>
-          <button onClick={() => { setCraters([]); setLastImpact(null); }} style={{ padding: '10px 12px', background: '#eee', color: '#000', borderRadius: 8, border: '1px solid #ddd' }}>
+          <button onClick={() => { setCraters([]); setLastImpact(null); }} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)' }} className="hover:bg-white/30 transition-colors">
             Borrar cráteres
           </button>
         </div>
@@ -537,9 +537,9 @@ const Simulacion = () => {
       {/* Prompt overlay when awaiting click */}
       {awaitingTarget && (
         <div style={{ position: 'absolute', left: 0, right: 0, top: '40%', display: 'flex', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ background: 'rgba(0,0,0,0.7)', color: '#fff', padding: 16, borderRadius: 8, textAlign: 'center' }}>
-            <div style={{ marginBottom: 8 }}>Haz clic en cualquier punto del planeta para lanzar el asteroide</div>
-            <button onClick={() => setAwaitingTarget(false)} style={{ padding: '6px 10px', borderRadius: 6, background: '#fff', color: '#000' }}>Cancelar</button>
+          <div className="glass" style={{ color: '#fff', padding: 16, borderRadius: 8, textAlign: 'center', border: '2px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ marginBottom: 8, fontWeight: 600 }}>Haz clic en cualquier punto del planeta para lanzar el asteroide</div>
+            <button onClick={() => setAwaitingTarget(false)} style={{ padding: '6px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.9)', color: '#000', fontWeight: 600 }} className="hover:bg-white transition-colors">Cancelar</button>
           </div>
         </div>
       )}
@@ -568,14 +568,14 @@ const Simulacion = () => {
         <div style={{ position: 'absolute', top: 110, right: 20, zIndex: 40 }}>
           <button
             onClick={() => setFreezeRotation(false)}
+            className="glass hover:bg-white/30 transition-colors"
             style={{
               padding: '8px 14px',
-              background: 'white',
-              color: '#000',
+              color: '#fff',
               borderRadius: 8,
               boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
               fontWeight: 500,
-              border: 'none',
+              border: '1px solid rgba(255,255,255,0.2)',
               cursor: 'pointer'
             }}
           >
@@ -585,7 +585,7 @@ const Simulacion = () => {
       )}
       {/* HUD informativo del último impacto */}
       {lastImpact && lastImpact.stats && (
-        <div style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 60, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: 12, borderRadius: 10, width: 260 }}>
+        <div className="glass" style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 60, color: '#fff', padding: 12, borderRadius: 10, width: 260, border: '1px solid rgba(255,255,255,0.2)' }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Último impacto: {lastImpact.data?.tipo || '—'}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
             <div>Energía</div>
@@ -605,7 +605,7 @@ const Simulacion = () => {
               <div style={{ fontWeight: 700 }}>{lastImpact.stats.light.toFixed(2)} km</div>
             </div>
             <div style={{ padding: 6, borderRadius: 6 }}>
-              <button onClick={() => { setCraters([]); setLastImpact(null); setFreezeRotation(false); }} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: 'none', background: '#111', color: '#fff' }}>Cerrar</button>
+              <button onClick={() => { setCraters([]); setLastImpact(null); setFreezeRotation(false); }} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', color: '#fff' }} className="hover:bg-white/20 transition-colors">Cerrar</button>
             </div>
           </div>
         </div>

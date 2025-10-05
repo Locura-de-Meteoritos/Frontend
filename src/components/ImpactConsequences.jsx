@@ -10,7 +10,7 @@ export default function ImpactConsequences({ impact, show = true }) {
   const { consequences, historical, summary, impactType, energy } = impact;
 
   return (
-    <div style={{
+    <div className="glass" style={{
       position: 'absolute',
       right: 20,
       top: 110,
@@ -18,8 +18,6 @@ export default function ImpactConsequences({ impact, show = true }) {
       maxHeight: 'calc(100vh - 140px)',
       overflowY: 'auto',
       zIndex: 60,
-      background: 'rgba(0, 0, 0, 0.85)',
-      backdropFilter: 'blur(10px)',
       borderRadius: 12,
       border: '2px solid rgba(255, 107, 107, 0.4)',
       color: '#fff',
