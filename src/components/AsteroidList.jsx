@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import { StarsCanvas } from './main/star-background';
@@ -7,19 +7,19 @@ import 'leaflet/dist/leaflet.css';
 
 const API_KEY = '4XTNhkIbujuES0LnRkxyO5v5HI96OqklU3ELcEDB';
 
-// Eventos históricos para comparación
+// Historical events for comparison
 const historicalEvents = [
   {
     id: 'hist-1',
-    name: 'Cheliábinsk 2013',
+    name: 'Chelyabinsk 2013',
     diameter: 20,
     velocity: 19,
     energy: 500,
-    location: 'Rusia',
-    casualties: '1500+ heridos',
+    location: 'Russia',
+    casualties: '1500+ injured',
     hazardous: true,
-    date: 'Histórico',
-    source: 'Evento Real'
+    date: 'Historical',
+    source: 'Real Event'
   },
   {
     id: 'hist-2',
@@ -28,26 +28,26 @@ const historicalEvents = [
     velocity: 15,
     energy: 15000,
     location: 'Siberia',
-    casualties: '2000 km² devastados',
+    casualties: '2000 km² devastated',
     hazardous: true,
-    date: 'Histórico',
-    source: 'Evento Real'
+    date: 'Historical',
+    source: 'Real Event'
   },
   {
     id: 'hist-3',
-    name: 'Chicxulub (Extinción Dinosaurios)',
+    name: 'Chicxulub (Dinosaur Extinction)',
     diameter: 10000,
     velocity: 20,
     energy: 100000000,
-    location: 'México',
-    casualties: 'Extinción masiva',
+    location: 'Mexico',
+    casualties: 'Mass extinction',
     hazardous: true,
-    date: 'Histórico',
-    source: 'Evento Real'
+    date: 'Historical',
+    source: 'Real Event'
   }
 ];
 
-// Asteroides Sentry (riesgo real CNEOS)
+// Sentry Asteroids (real CNEOS risk)
 const sentryAsteroids = [
   {
     id: 'sentry-1',
@@ -119,15 +119,15 @@ const AsteroidList = () => {
       div.innerHTML = `
         <div style="display: flex; align-items: center; margin: 5px 0;">
           <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 107, 107, 0.5); margin-right: 10px;"></div>
-          <span>Zona de Destrucción Total</span>
+          <span>Total Destruction Zone</span>
         </div>
         <div style="display: flex; align-items: center; margin: 5px 0;">
           <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 193, 7, 0.5); margin-right: 10px;"></div>
-          <span>Zona de Daño Moderado</span>
+          <span>Moderate Damage Zone</span>
         </div>
         <div style="display: flex; align-items: center; margin: 5px 0;">
           <div style="width: 20px; height: 20px; border-radius: 50%; background: rgba(76, 175, 80, 0.5); margin-right: 10px;"></div>
-          <span>Zona de Daño Leve</span>
+          <span>Light Damage Zone</span>
         </div>
       `;
       return div;
@@ -144,7 +144,7 @@ const AsteroidList = () => {
     };
   }, []);
 
-  // Cargar datos de la API de NASA
+  // Load NASA API data
   const loadNEOData = async () => {
     setLoading(true);
     setDataSource('NEO');
@@ -179,14 +179,14 @@ const AsteroidList = () => {
       
       setAsteroids(neoList);
     } catch (error) {
-      console.error('Error al cargar datos NEO:', error);
-      alert('Error al cargar datos NEO');
+      console.error('Error loading NEO data:', error);
+      alert('Error loading NEO data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Cargar datos Sentry
+  // Load Sentry data
   const loadSentryData = () => {
     setLoading(true);
     setDataSource('Sentry');
@@ -196,7 +196,7 @@ const AsteroidList = () => {
     }, 500);
   };
 
-  // Cargar eventos históricos
+  // Load historical events
   const loadHistoricalEvents = () => {
     setLoading(true);
     setDataSource('Histórico');
@@ -354,7 +354,7 @@ const AsteroidList = () => {
             🌠 IMPACTUS
           </h1>
           <p className="text-gray-300 mb-4">
-            Sistema Integrado de Modelado de Impactos de Asteroides
+            Integrated Asteroid Impact Modeling System
           </p>
           <div className="flex gap-2 justify-center flex-wrap">
             <span className="glass px-3 py-1 rounded-full text-sm border border-[rgb(138,43,226)]">📡 NASA NEO API</span>
@@ -368,7 +368,7 @@ const AsteroidList = () => {
           <div className="lg:col-span-1">
             <div className="glass p-6 rounded-lg border border-[rgba(138,43,226,0.3)]">
               <h2 className="text-2xl font-bold mb-4 text-[rgb(138,43,226)]">
-                🎯 Asteroides Detectados
+                🎯 Detected Asteroids
               </h2>
               
               <div className="flex flex-col gap-2 mb-6">
@@ -376,7 +376,7 @@ const AsteroidList = () => {
                   onClick={loadNEOData}
                   className="w-full px-4 py-2 bg-[rgb(138,43,226)] rounded-lg hover:bg-[rgb(158,63,246)] transition-colors"
                 >
-                  🔄 Cargar NEO (7 días)
+                  🔄 Load NEO (7 days)
                 </button>
                 <button
                   onClick={loadSentryData}
@@ -388,20 +388,20 @@ const AsteroidList = () => {
                   onClick={() => setFilterHazardous(!filterHazardous)}
                   className="w-full px-4 py-2 bg-transparent border-2 border-[rgb(138,43,226)] rounded-lg hover:bg-[rgba(138,43,226,0.2)] transition-colors"
                 >
-                  {filterHazardous ? '✅ Mostrar Todos' : '🔴 Solo Peligrosos'}
+                  {filterHazardous ? '✅ Show All' : '🔴 Hazardous Only'}
                 </button>
                 <button
                   onClick={loadHistoricalEvents}
                   className="w-full px-4 py-2 bg-transparent border-2 border-[rgb(138,43,226)] rounded-lg hover:bg-[rgba(138,43,226,0.2)] transition-colors"
                 >
-                  📜 Eventos Históricos
+                  📜 Historical Events
                 </button>
               </div>
 
               {loading && (
                 <div className="text-center py-8">
                   <div className="inline-block w-8 h-8 border-4 border-[rgb(138,43,226)] border-t-transparent rounded-full animate-spin mb-2"></div>
-                  <p className="text-gray-400">Cargando datos...</p>
+                  <p className="text-gray-400">Loading data...</p>
                 </div>
               )}
 
@@ -431,7 +431,7 @@ const AsteroidList = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Mapa Leaflet */}
             <div className="glass p-6 rounded-lg border border-[rgba(138,43,226,0.3)]">
-              <h2 className="text-2xl font-bold mb-4">🗺️ Simulador de Impacto</h2>
+              <h2 className="text-2xl font-bold mb-4">🗺️ Impact Simulator</h2>
               <div 
                 ref={mapRef} 
                 className="w-full h-96 rounded-lg border-2 border-[rgba(138,43,226,0.3)]"
@@ -451,21 +451,21 @@ const AsteroidList = () => {
                     <div className="text-xs text-gray-400">kilotones</div>
                   </div>
                   <div className="glass p-4 rounded-lg border-l-4 border-l-red-500">
-                    <div className="text-xs text-gray-400 mb-1">Destrucción Total</div>
+                    <div className="text-xs text-gray-400 mb-1">Total Destruction</div>
                     <div className="text-2xl font-bold text-red-500">
                       {impactData.radii.total.toFixed(2)}
                     </div>
                     <div className="text-xs text-gray-400">km</div>
                   </div>
                   <div className="glass p-4 rounded-lg border-l-4 border-l-yellow-500">
-                    <div className="text-xs text-gray-400 mb-1">Daño Moderado</div>
+                    <div className="text-xs text-gray-400 mb-1">Moderate Damage</div>
                     <div className="text-2xl font-bold text-yellow-500">
                       {impactData.radii.moderate.toFixed(2)}
                     </div>
                     <div className="text-xs text-gray-400">km</div>
                   </div>
                   <div className="glass p-4 rounded-lg border-l-4 border-l-green-500">
-                    <div className="text-xs text-gray-400 mb-1">Daño Leve</div>
+                    <div className="text-xs text-gray-400 mb-1">Light Damage</div>
                     <div className="text-2xl font-bold text-green-500">
                       {impactData.radii.light.toFixed(2)}
                     </div>
@@ -475,7 +475,7 @@ const AsteroidList = () => {
 
                 {/* Consecuencias */}
                 <div className="glass p-6 rounded-lg border-2 border-red-500/30">
-                  <h3 className="text-xl font-bold mb-4 text-red-400">⚠️ Consecuencias Estimadas</h3>
+                  <h3 className="text-xl font-bold mb-4 text-red-400">⚠️ Estimated Consequences</h3>
                   <div className="space-y-3">
                     {[
                       { icon: '🌊', label: 'Riesgo de Tsunami', value: impactData.isOcean ? '⚠️ ALTO' : '✅ Bajo' },
