@@ -1,3 +1,4 @@
+import Spline from '@splinetool/react-spline'
 const Body = () => {
   const handleSimulationClick = () => {
     window.location.href = "/simulacion";
@@ -31,9 +32,11 @@ const Body = () => {
           </div>
         </div>
       </section>
-
+      <div className="w-full h-[600px] relative" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+        <Spline scene="https://prod.spline.design/Xn1dwVpX-cuU4TI6/scene.splinecode" />
+      </div>
       {/* Features Section */}
-      <section className="bg-gray-50 py-20">
+      {/* <section className="bg-gray-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">¿Por qué elegirnos?</h2>
@@ -80,7 +83,7 @@ const Body = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20">
