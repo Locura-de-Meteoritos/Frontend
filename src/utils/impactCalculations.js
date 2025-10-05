@@ -1,26 +1,4 @@
-/**
- * =============================================================================
- * MÓDULO DE CÁLCULOS AVANZADOS DE IMPACTO DE ASTEROIDES
- * =============================================================================
- * 
- * Este módulo centraliza todas las fórmulas y cálculos relacionados con
- * impactos de asteroides, basado en el sistema IMPACTUS de NASA.
- * 
- * Fuentes:
- * - NASA NEO API
- * - CNEOS JPL (Jet Propulsion Laboratory)
- * - Fórmulas de explosiones nucleares (para radios de daño)
- * - Datos históricos de impactos reales
- * 
- * Conversiones importantes:
- * - 1 kilotón de TNT = 4.184 × 10^12 Joules
- * - Densidad asteroide típica: 2000-3000 kg/m³
- * - Velocidad impacto típica: 11-70 km/s
- */
 
-// =============================================================================
-// EVENTOS HISTÓRICOS DE REFERENCIA
-// =============================================================================
 export const HISTORICAL_EVENTS = [
   {
     name: "Cheliábinsk (2013)",
