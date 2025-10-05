@@ -1,13 +1,70 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+
+// ============================================================================
+// GENERADOR DE GEOMETRÍA IRREGULAR PARA ASTEROIDES
+// Crea formas rocosas aleatorias usando deformación de esfera base
+// ============================================================================
+function createAsteroidGeometry(seed = Math.random()) {
+  const geometry = new THREE.SphereGeometry(1, 64, 64); // Más segmentos para suavidad
+  const positions = geometry.attributes.position;
+  
+  // Usar seed para generar números pseudo-aleatorios consistentes
+  const random = (min, max) => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return min + (seed / 233280) * (max - min);
+  };
+  
+  // Deformar cada vértice de manera irregular pero suave
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const y = positions.getY(i);
+    const z = positions.getZ(i);
+    
+    // Calcular distancia desde el centro
+    const length = Math.sqrt(x * x + y * y + z * z);
+    
+    // Frecuencias muy bajas para deformaciones amplias y suaves (asteroides realistas)
+    const noise1 = Math.sin(x * 1.2 + seed) * Math.cos(y * 1.4 + seed) * 0.05;
+    const noise2 = Math.sin(y * 1.5 + seed) * Math.cos(z * 1.3 + seed) * 0.04;
+    const noise3 = Math.sin(z * 1.1 + seed) * Math.cos(x * 1.6 + seed) * 0.04;
+    
+    // Capa adicional de ruido de muy baja frecuencia para forma general irregular
+    const lowFreqNoise = Math.sin(x * 0.7 + seed) * Math.cos(y * 0.8 + seed) * Math.sin(z * 0.6 + seed) * 0.10;
+    
+    // Cráteres muy sutiles (casi imperceptibles)
+    const craterNoise = Math.pow(Math.abs(Math.sin(x * 3.0 + y * 2.8 + z * 3.2 + seed)), 3.0) * random(-0.03, 0.01);
+    
+    // Factor de deformación combinado (muy suave, sin picos)
+    const deformation = 1 + noise1 + noise2 + noise3 + lowFreqNoise + craterNoise;
+    
+    // Aplicar deformación manteniendo la dirección original
+    positions.setXYZ(
+      i,
+      (x / length) * deformation,
+      (y / length) * deformation,
+      (z / length) * deformation
+    );
+  }
+  
+  // Recalcular normales para iluminación correcta
+  geometry.computeVertexNormals();
+  
+  return geometry;
+}
 
 export default function Asteroid({ start, target, speed = 0.5, onHit, debug = false, tipo='Roca', masa=1000, densidad=3000, angulo=45, color }) {
   const mesh = useRef()
   const dir = useRef(new THREE.Vector3())
   const distance = useRef(0)
   const traveled = useRef(0)
-  // We'll render a simple yellow sphere (no texture)
+  
+  // Generar geometría irregular única para este asteroide (basada en coordenadas de inicio)
+  const asteroidGeometry = useMemo(() => {
+    const seed = start ? (start.x * 1000 + start.y * 100 + start.z * 10) : Math.random() * 10000;
+    return createAsteroidGeometry(seed);
+  }, [start])
 
   useEffect(() => {
     if (!start || !target) return
@@ -112,9 +169,16 @@ export default function Asteroid({ start, target, speed = 0.5, onHit, debug = fa
       {/* small point light to help the asteroid stand out */}
       <pointLight position={[0,0,0]} intensity={0.6} distance={2} />
       <mesh ref={mesh} position={start?.toArray ? start.toArray() : [0,0,0]} frustumCulled={false}>
-        {/* Usamos una esfera base unit (radio=1) y controlamos el tamaño por scale para forzar el tamaño fijo */}
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial color={tipoColor} emissive={emissiveColor} emissiveIntensity={0.9} metalness={metalness} roughness={roughness} />
+        {/* Geometría irregular generada proceduralmente */}
+        <primitive object={asteroidGeometry} attach="geometry" />
+        <meshStandardMaterial 
+          color={tipoColor} 
+          emissive={emissiveColor} 
+          emissiveIntensity={0.9} 
+          metalness={metalness} 
+          roughness={roughness}
+          flatShading={false} // Shading suave para mejor apariencia
+        />
       </mesh>
 
       {debug && (
