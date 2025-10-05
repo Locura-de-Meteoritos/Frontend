@@ -4,30 +4,50 @@ const Body = () => {
     window.location.href = "/simulacion";
   };
 
+  const handleSistemaSolarClick = () => {
+    window.location.href = "/sistemaSolar";
+  };
+
   return (
     <>
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-            Descubre el universo
+            Vive una simulación interactiva
             <br />
-            <span className="text-white">a tu alcance</span>
+            <span className="text-white">de impactos de asteroides y aprende con datos reales</span>
           </h1>
-          <p className="text-white text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Explora la fascinante colección de meteoritos y aprende sobre los misterios 
-            del espacio exterior con nuestra experiencia única e interactiva.
+          <p className="text-white text-gray-300 mb-6 max-w-2xl mx-auto leading-relaxed">
+            Experimenta cómo distintos meteoritos afectan la Tierra: ajusta tamaño, velocidad y punto de impacto,
+            y observa las consecuencias en tiempo real. Esta experiencia combina visualización 3D con cálculos físicos
+            para ofrecer una aproximación educativa y divertida.
           </p>
+
+          <p className="text-sm text-gray-400 mb-6 max-w-2xl mx-auto">Pulsa "Empezar simulación" para elegir un asteroide y su punto de impacto.</p>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               className="text-white px-8 py-4 rounded-lg text-lg font-medium relative 
                          bg-[rgb(138,43,226)] border-2 border-[rgb(158,63,246)] 
                          shadow-[0_0_20px_rgba(138,43,226,0.6)]
-                         hover:scale-105 hover:bg-[rgb(158,63,246)] hover:shadow-[0_0_30px_rgba(138,43,226,0.9)]
+                         hover:scale-105 hover:bg-[rgb(158,63,246)] hover:shadow-[0_0_30px_rgba(138,63,246,0.9)]
                          transition-all duration-300 ease-out"
               onClick={handleSimulationClick}
             >
               Empezar simulación
+            </button>
+
+            {/* Nuevo botón para navegar a la página del Sistema Solar */}
+            <button
+              className="text-white px-6 py-3 rounded-lg text-md font-medium relative 
+                         bg-[rgb(16,185,129)] border-2 border-[rgb(34,197,94)] 
+                         shadow-[0_0_12px_rgba(16,185,129,0.45)]
+                         hover:scale-105 hover:bg-[rgb(34,197,94)] hover:shadow-[0_0_18px_rgba(34,197,94,0.65)]
+                         transition-all duration-300 ease-out"
+              onClick={handleSistemaSolarClick}
+            >
+              Ver Sistema Solar
             </button>
           </div>
         </div>
