@@ -5,6 +5,7 @@ import './index.css';
 import App from './App.jsx';
 import Simulacion from './components/simulacion.jsx';
 import AsteroidList from './components/AsteroidList.jsx';
+import SistemaSolar from './components/sistemaSolar/sistemaSolar.jsx';
 
 
 createRoot(document.getElementById('root')).render(
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<App />} />
         <Route path="/simulacion" element={<Simulacion />} />
         <Route path="/asteroides" element={<AsteroidList /  >} />
+        <Route path="/sistemaSolar" element={<SistemaSolar />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>

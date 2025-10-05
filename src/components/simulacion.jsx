@@ -504,12 +504,12 @@ const Simulacion = () => {
 
       {/* Panel lateral con estilo glass */}
       <aside className="glass" style={{ position: 'absolute', left: 16, top: 150, width: 320, zIndex: 40, padding: 16, borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', maxHeight: '70vh', overflowY: 'auto' }}>
-        <h3 className="text-lg font-semibold mb-4 text-white">Configurar Asteroide</h3>
+        <h3 className="text-lg font-semibold mb-4 text-white">Configure Asteroid</h3>
 
         {/* --- NEO Catalog --- */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6, color: '#fff' }}>
-            🎯 Catálogo NEO (NASA)
+            🎯 NEO Catalog (NASA)
           </div>
           
           {/* Botones de filtro */}
@@ -526,7 +526,7 @@ const Simulacion = () => {
                 cursor: 'pointer'
               }}
             >
-              📡 Todos (7d)
+              📡 All (7d)
             </button>
             <button 
               onClick={filterHazardous}
@@ -540,7 +540,7 @@ const Simulacion = () => {
                 cursor: 'pointer'
               }}
             >
-              ⚠️ Peligrosos
+              ⚠️ Hazardous
             </button>
             <button 
               onClick={loadHistoricalEvents}
@@ -554,11 +554,11 @@ const Simulacion = () => {
                 cursor: 'pointer'
               }}
             >
-              📜 Históricos
+              📜 Historical
             </button>
           </div>
 
-          {neosLoading && <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Cargando NEOs...</div>}
+          {neosLoading && <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Loading NEOs...</div>}
           {neosError && <div style={{ fontSize: '0.85rem', color: '#ff6b6b' }}>Error: {neosError}</div>}
           {!neosLoading && !neosError && neos && neos.length > 0 && (
             <div style={{ maxHeight: 140, overflowY: 'auto', padding: 6, borderRadius: 6, background: 'rgba(255,255,255,0.1)' }}>
@@ -627,14 +627,14 @@ const Simulacion = () => {
           <div style={{ fontSize: '0.85rem', color: '#e0e0e0' }}>Radio visual (escena): <strong className="text-white">{previewCrater.radiusFinal.toFixed(3)}</strong> u</div>
         </div>
 
-        <label className="block mb-2 text-white">Tipo</label>
+        <label className="block mb-2 text-white">Type</label>
         <select name="tipo" value={params.tipo} onChange={handleChange} className="w-full mb-3 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm">
-          <option className="bg-gray-800">Roca</option>
-          <option className="bg-gray-800">Hierro</option>
-          <option className="bg-gray-800">Mixto</option>
+          <option className="bg-gray-800">Rock</option>
+          <option className="bg-gray-800">Iron</option>
+          <option className="bg-gray-800">Mixed</option>
         </select>
 
-        <label className="block mb-2 text-white">Masa (kg)</label>
+        <label className="block mb-2 text-white">Mass (kg)</label>
         <input name="masa" type="number" value={params.masa} onChange={handleChange} className="w-full mb-3 p-2 border border-white/20 rounded bg-white/10 text-white backdrop-blur-sm" />
 
         <label className="block mb-1 text-white">Velocidad (relativa 1-100)</label>
@@ -652,15 +652,15 @@ const Simulacion = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <input id="helpers" type="checkbox" checked={showHelpers} onChange={(e) => setShowHelpers(e.target.checked)} />
-          <label htmlFor="helpers" className="text-white">Mostrar helpers (debug)</label>
+          <label htmlFor="helpers" className="text-white">Show helpers (debug)</label>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={handleSimulate} style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.9)', color: '#000', borderRadius: 8, fontWeight: 600 }} className="hover:bg-white transition-colors">
-            Simular impacto
+            Simulate impact
           </button>
           <button onClick={() => { setCraters([]); setLastImpact(null); }} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 8, border: '1px solid rgba(255,255,255,0.3)' }} className="hover:bg-white/30 transition-colors">
-            Borrar cráteres
+            Clear craters
           </button>
         </div>
       </aside>
@@ -669,8 +669,8 @@ const Simulacion = () => {
       {awaitingTarget && (
         <div style={{ position: 'absolute', left: 0, right: 0, top: '40%', display: 'flex', justifyContent: 'center', zIndex: 50 }}>
           <div className="glass" style={{ color: '#fff', padding: 16, borderRadius: 8, textAlign: 'center', border: '2px solid rgba(255,255,255,0.2)' }}>
-            <div style={{ marginBottom: 8, fontWeight: 600 }}>Haz clic en cualquier punto del planeta para lanzar el asteroide</div>
-            <button onClick={() => setAwaitingTarget(false)} style={{ padding: '6px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.9)', color: '#000', fontWeight: 600 }} className="hover:bg-white transition-colors">Cancelar</button>
+            <div style={{ marginBottom: 8, fontWeight: 600 }}>Click anywhere on the planet to launch the asteroid</div>
+            <button onClick={() => setAwaitingTarget(false)} style={{ padding: '6px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.9)', color: '#000', fontWeight: 600 }} className="hover:bg-white transition-colors">Cancel</button>
           </div>
         </div>
       )}
@@ -698,26 +698,26 @@ const Simulacion = () => {
       {/* HUD informativo del último impacto */}
       {lastImpact && lastImpact.stats && (
         <div className="glass" style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 60, color: '#fff', padding: 12, borderRadius: 10, width: 260, border: '1px solid rgba(255,255,255,0.2)' }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Último impacto: {lastImpact.data?.tipo || '—'}</div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Last impact: {lastImpact.data?.tipo || '—'}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-            <div>Energía</div>
+            <div>Energy</div>
             <div style={{ fontWeight: 700 }}>{lastImpact.stats.kilotons.toFixed(2)} kt</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8, fontSize: '0.85rem' }}>
             <div style={{ background: 'rgba(255,107,107,0.08)', padding: 6, borderRadius: 6 }}>
-              <div style={{ fontSize: '0.75rem' }}>Destrucción</div>
+              <div style={{ fontSize: '0.75rem' }}>Destruction</div>
               <div style={{ fontWeight: 700 }}>{lastImpact.stats.total.toFixed(2)} km</div>
             </div>
             <div style={{ background: 'rgba(255,193,7,0.06)', padding: 6, borderRadius: 6 }}>
-              <div style={{ fontSize: '0.75rem' }}>Moderado</div>
+              <div style={{ fontSize: '0.75rem' }}>Moderate</div>
               <div style={{ fontWeight: 700 }}>{lastImpact.stats.moderate.toFixed(2)} km</div>
             </div>
             <div style={{ background: 'rgba(76,175,80,0.06)', padding: 6, borderRadius: 6 }}>
-              <div style={{ fontSize: '0.75rem' }}>Leve</div>
+              <div style={{ fontSize: '0.75rem' }}>Light</div>
               <div style={{ fontWeight: 700 }}>{lastImpact.stats.light.toFixed(2)} km</div>
             </div>
             <div style={{ padding: 6, borderRadius: 6 }}>
-              <button onClick={() => { setCraters([]); setLastImpact(null); setFreezeRotation(false); }} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', color: '#fff' }} className="hover:bg-white/20 transition-colors">Cerrar</button>
+              <button onClick={() => { setCraters([]); setLastImpact(null); setFreezeRotation(false); }} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', color: '#fff' }} className="hover:bg-white/20 transition-colors">Close</button>
             </div>
           </div>
         </div>
