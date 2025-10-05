@@ -695,25 +695,6 @@ const Simulacion = () => {
           ))}
         </Canvas>
       </div>
-      {freezeRotation && (
-        <div style={{ position: 'absolute', top: 110, right: 20, zIndex: 40 }}>
-          <button
-            onClick={() => setFreezeRotation(false)}
-            className="glass hover:bg-white/30 transition-colors"
-            style={{
-              padding: '8px 14px',
-              color: '#fff',
-              borderRadius: 8,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-              fontWeight: 500,
-              border: '1px solid rgba(255,255,255,0.2)',
-              cursor: 'pointer'
-            }}
-          >
-            Reanudar rotación
-          </button>
-        </div>
-      )}
       {/* HUD informativo del último impacto */}
       {lastImpact && lastImpact.stats && (
         <div className="glass" style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 60, color: '#fff', padding: 12, borderRadius: 10, width: 260, border: '1px solid rgba(255,255,255,0.2)' }}>
