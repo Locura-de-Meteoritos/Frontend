@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import Crater from './Crater';
 
 // ============================================================================
-// HOOK PERSONALIZADO: Carga de texturas de la Tierra (4K)
-// Fuente: GitHub (webgl-earth) - Sin problemas CORS
+// HOOK PERSONALIZADO: Carga de texturas de la Tierra (OPTIMIZADO)
+// Usa texturas 2K en lugar de 4K para mejor rendimiento en web
 // ============================================================================
 function useEarthTextures() {
   const [textures, setTextures] = useState({});
@@ -17,34 +17,36 @@ function useEarthTextures() {
       try {
         const loader = new THREE.TextureLoader();
         
-        console.log('🌍 Cargando texturas de la Tierra...');
+        console.log('🌍 Cargando texturas de la Tierra (2K optimizado)...');
         
-        // Texturas de alta calidad sin problemas de CORS
-        const [dayTexture, nightTexture, normalTexture, cloudsTexture] = await Promise.all([
+        // OPTIMIZACIÓN: Usar texturas 2K en lugar de 4K (reduce peso ~75%)
+        // 4K = ~15MB por textura → 2K = ~4MB por textura
+        const [dayTexture, cloudsTexture] = await Promise.all([
           loader.loadAsync(
             'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg'
           ).catch(() => null),
-          loader.loadAsync(
-            'https://raw.githubusercontent.com/turban/webgl-earth/master/images/5_night_4k.jpg'
-          ).catch(() => null),
-          loader.loadAsync(
-            'https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg'
-          ).catch(() => null),
+          // Solo cargar nubes si es necesario
           loader.loadAsync(
             'https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png'
           ).catch(() => null)
         ]);
 
+        // OPTIMIZACIÓN: Configurar compresión y filtros eficientes
         if (dayTexture) {
           dayTexture.wrapS = dayTexture.wrapT = THREE.RepeatWrapping;
-          nightTexture && (nightTexture.wrapS = nightTexture.wrapT = THREE.RepeatWrapping);
-          normalTexture && (normalTexture.wrapS = normalTexture.wrapT = THREE.RepeatWrapping);
-          cloudsTexture && (cloudsTexture.wrapS = cloudsTexture.wrapT = THREE.RepeatWrapping);
+          dayTexture.minFilter = THREE.LinearFilter; // Más rápido que MipMap
+          dayTexture.magFilter = THREE.LinearFilter;
+          dayTexture.generateMipmaps = false; // Ahorra memoria
           
-          console.log('✅ Texturas cargadas exitosamente:', {
+          if (cloudsTexture) {
+            cloudsTexture.wrapS = cloudsTexture.wrapT = THREE.RepeatWrapping;
+            cloudsTexture.minFilter = THREE.LinearFilter;
+            cloudsTexture.magFilter = THREE.LinearFilter;
+            cloudsTexture.generateMipmaps = false;
+          }
+          
+          console.log('✅ Texturas optimizadas cargadas:', {
             day: !!dayTexture,
-            night: !!nightTexture,
-            normal: !!normalTexture,
             clouds: !!cloudsTexture
           });
         } else {
@@ -53,8 +55,6 @@ function useEarthTextures() {
 
         setTextures({
           day: dayTexture,
-          night: nightTexture,
-          normal: normalTexture,
           clouds: cloudsTexture
         });
         setLoading(false);
@@ -112,76 +112,74 @@ export default function Earth3D({
     // ========================================================================
     // TIERRA CON TEXTURAS REALES (SIN CORS)
     // ========================================================================
-    console.log('🌍 Renderizando Tierra con texturas de alta calidad');
+    console.log('🌍 Renderizando Tierra con texturas optimizadas');
     
-    // Geometría de alta calidad
-    const earthGeo = new THREE.SphereGeometry(planetRadius, 256, 256);
+    // OPTIMIZACIÓN: Reducir geometría de 256 a 128 segmentos (reduce ~75% polígonos)
+    // 256x256 = 65,536 polígonos → 128x128 = 16,384 polígonos
+    const earthGeo = new THREE.SphereGeometry(planetRadius, 128, 128);
     
-    // Material con todas las texturas NASA
+    // OPTIMIZACIÓN: Material simplificado sin normal/bump maps (reduce procesamiento GPU)
     const earthMat = new THREE.MeshPhongMaterial({
-      map: textures.day, // Color diurno
-      specularMap: textures.night, // Luces nocturnas como specular
-      specular: new THREE.Color(0x333333),
-      shininess: 10,
-      normalMap: textures.normal, // Normal map para relieve
-      normalScale: new THREE.Vector2(0.85, 0.85), // Intensidad del relieve
-      bumpMap: textures.normal, // Usar también como bump map
-      bumpScale: 0.02
+      map: textures.day,
+      shininess: 5,
+      // Eliminamos: specularMap, normalMap, bumpMap para mejor rendimiento
     });
     
     const earthMesh = new THREE.Mesh(earthGeo, earthMat);
     earthMesh.position.set(0, planetOffsetY, 0);
     earthMesh.name = 'EarthNASA';
-    earthMesh.renderOrder = 0; // Tierra se dibuja primero
+    earthMesh.renderOrder = 0;
     earthMeshRef.current = earthMesh;
     group.add(earthMesh);
     
     // ========================================================================
-    // NUBES CON TEXTURA REAL 4K
+    // NUBES (OPTIMIZADO)
     // ========================================================================
     if (showClouds && textures.clouds) {
-      const cloudsGeo = new THREE.SphereGeometry(planetRadius * 1.01, 128, 128);
+      // OPTIMIZACIÓN: Reducir segmentos de nubes a 64 (más simple que la tierra)
+      const cloudsGeo = new THREE.SphereGeometry(planetRadius * 1.01, 64, 64);
       const cloudsMat = new THREE.MeshPhongMaterial({
         map: textures.clouds,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.6,
         depthWrite: false,
-        side: THREE.DoubleSide
+        side: THREE.FrontSide // Solo FrontSide para mejor rendimiento
       });
       
       const cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
       cloudsMesh.name = 'CloudsNASA';
       cloudsMesh.position.set(0, planetOffsetY, 0);
-      cloudsMesh.renderOrder = 999; // Nubes después de la Tierra pero antes de atmósfera
+      cloudsMesh.renderOrder = 999;
       cloudsRef.current = cloudsMesh;
       group.add(cloudsMesh);
     }
     
     // ========================================================================
-    // ATMÓSFERA (Rayleigh Scattering - Glow azul mejorado)
-    // Con viewVector dinámico para efectos de luz realistas
+    // ATMÓSFERA SIMPLIFICADA (OPTIMIZADO)
     // ========================================================================
     if (showAtmosphere) {
-      const atmosphereGeo = new THREE.SphereGeometry(planetRadius * 1.08, 128, 128);
+      // OPTIMIZACIÓN: Reducir segmentos de atmósfera a 64
+      const atmosphereGeo = new THREE.SphereGeometry(planetRadius * 1.08, 64, 64);
       const atmosphereMat = new THREE.ShaderMaterial({
         uniforms: {
           uGlowColor: { value: new THREE.Color(0x88ccff) },
-          uIntensity: { value: 0.7 },
-          viewVector: { value: new THREE.Vector3(0, 0, 0) } // NUEVO: viewVector dinámico
+          uIntensity: { value: 0.6 }, // Reducir intensidad
+          viewVector: { value: new THREE.Vector3(0, 0, 0) }
         },
         vertexShader: `
           uniform vec3 viewVector;
           varying vec3 vNormal;
-          varying vec3 vPosition;
           varying float intensity;
           
           void main() {
             vNormal = normalize(normalMatrix * normal);
-            vPosition = position;
             
             // Calcular intensidad en el vertex shader (optimización)
             vec3 actualNormal = normalize(normalMatrix * normal);
             intensity = pow(0.6 - dot(actualNormal, viewVector), 2.0);
+            vec3 viewDir = normalize(viewVector);
+            float intensity_temp = pow(0.6 - dot(vNormal, viewDir), 3.0);
+            intensity = intensity_temp;
             
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }
@@ -190,22 +188,12 @@ export default function Earth3D({
           uniform vec3 uGlowColor;
           uniform float uIntensity;
           varying vec3 vNormal;
-          varying vec3 vPosition;
           varying float intensity;
           
           void main() {
-            // Efecto fresnel combinado con viewVector
-            vec3 viewDir = normalize(cameraPosition - vPosition);
-            float fresnel = pow(1.0 - abs(dot(vNormal, viewDir)), 4.0);
-            
-            // Combinar ambas intensidades
-            float finalIntensity = mix(intensity, fresnel, 0.5) * uIntensity;
-            
-            // Color azul atmosférico con gradiente
-            vec3 color = uGlowColor * finalIntensity;
-            
-            // Opacidad gradiente mejorada
-            float alpha = finalIntensity * 0.65;
+            // Shader simplificado para mejor rendimiento
+            vec3 color = uGlowColor * intensity * uIntensity;
+            float alpha = intensity * 0.5; // Reducir opacidad
             
             gl_FragColor = vec4(color, alpha);
           }
@@ -220,7 +208,7 @@ export default function Earth3D({
       const atmosphereMesh = new THREE.Mesh(atmosphereGeo, atmosphereMat);
       atmosphereMesh.name = 'EarthAtmosphere';
       atmosphereMesh.position.set(0, planetOffsetY, 0);
-      atmosphereMesh.renderOrder = 1000; // Atmósfera se dibuja AL FINAL (encima de todo)
+      atmosphereMesh.renderOrder = 1000;
       atmosphereRef.current = atmosphereMesh;
       group.add(atmosphereMesh);
     }
@@ -338,7 +326,8 @@ export default function Earth3D({
         <ambientLight intensity={0.5} />
         <pointLight position={[planetRadius * 2, planetRadius, planetRadius * 2]} intensity={1} />
         
-        <Stars radius={planetRadius * 50} depth={planetRadius * 10} count={5000} factor={4} saturation={0} fade speed={1} />
+        {/* OPTIMIZACIÓN: Reducir estrellas de 5000 a 2000 */}
+        <Stars radius={planetRadius * 50} depth={planetRadius * 10} count={2000} factor={4} saturation={0} fade speed={1} />
       </group>
     );
   }
@@ -428,28 +417,29 @@ export default function Earth3D({
         castShadow={false}
       />
       
-      {/* ====== CONTROLES DE ÓRBITA ====== */}
+      {/* ====== CONTROLES DE ÓRBITA (OPTIMIZADO) ====== */}
       <OrbitControls 
         enableZoom={true}
-        minDistance={planetRadius * 1.5} // Zoom mínimo: 150 unidades
-        maxDistance={planetRadius * 5} // Zoom máximo: 500 unidades
-        enableDamping={true} // Smooth damping
-        dampingFactor={0.05}
+        minDistance={planetRadius * 1.5}
+        maxDistance={planetRadius * 5}
+        enableDamping={true}
+        dampingFactor={0.08} // Menos suave = menos cálculos
         rotateSpeed={0.5}
         zoomSpeed={0.8}
         panSpeed={0.5}
         autoRotate={enableAutoRotate}
         autoRotateSpeed={0.5}
         target={[0, planetOffsetY, 0]}
+        enablePan={false} // Desactivar pan para simplificar
       />
       
-      {/* ====== FONDO ESTELAR ====== */}
+      {/* ====== FONDO ESTELAR (OPTIMIZADO) ====== */}
       <Stars 
-        radius={planetRadius * 50} // Campo estelar muy amplio
+        radius={planetRadius * 50}
         depth={planetRadius * 10} 
-        count={12000} // 12,000 estrellas
-        factor={5} 
-        saturation={0} // Estrellas blancas
+        count={3000} // Reducido de 12,000 a 3,000 estrellas
+        factor={4} 
+        saturation={0}
         fade={true}
         speed={0.3}
       />

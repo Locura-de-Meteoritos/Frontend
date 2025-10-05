@@ -3,11 +3,12 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 // ============================================================================
-// GENERADOR DE GEOMETRÍA IRREGULAR PARA ASTEROIDES
+// GENERADOR DE GEOMETRÍA IRREGULAR PARA ASTEROIDES (OPTIMIZADO)
 // Crea formas rocosas aleatorias usando deformación de esfera base
 // ============================================================================
 function createAsteroidGeometry(seed = Math.random()) {
-  const geometry = new THREE.SphereGeometry(1, 64, 64); // Más segmentos para suavidad
+  // OPTIMIZACIÓN: Reducir segmentos de 64 a 32 (reduce 75% de polígonos)
+  const geometry = new THREE.SphereGeometry(1, 32, 32); // Era 64x64, ahora 32x32
   const positions = geometry.attributes.position;
   
   // Usar seed para generar números pseudo-aleatorios consistentes
@@ -16,30 +17,20 @@ function createAsteroidGeometry(seed = Math.random()) {
     return min + (seed / 233280) * (max - min);
   };
   
-  // Deformar cada vértice de manera irregular pero suave
+  // OPTIMIZACIÓN: Simplificar deformación (menos capas de ruido)
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i);
     const y = positions.getY(i);
     const z = positions.getZ(i);
     
-    // Calcular distancia desde el centro
     const length = Math.sqrt(x * x + y * y + z * z);
     
-    // Frecuencias muy bajas para deformaciones amplias y suaves (asteroides realistas)
+    // Solo 2 capas de ruido en lugar de 5
     const noise1 = Math.sin(x * 1.2 + seed) * Math.cos(y * 1.4 + seed) * 0.05;
-    const noise2 = Math.sin(y * 1.5 + seed) * Math.cos(z * 1.3 + seed) * 0.04;
-    const noise3 = Math.sin(z * 1.1 + seed) * Math.cos(x * 1.6 + seed) * 0.04;
+    const lowFreqNoise = Math.sin(x * 0.7 + seed) * Math.cos(y * 0.8 + seed) * 0.08;
     
-    // Capa adicional de ruido de muy baja frecuencia para forma general irregular
-    const lowFreqNoise = Math.sin(x * 0.7 + seed) * Math.cos(y * 0.8 + seed) * Math.sin(z * 0.6 + seed) * 0.10;
+    const deformation = 1 + noise1 + lowFreqNoise;
     
-    // Cráteres muy sutiles (casi imperceptibles)
-    const craterNoise = Math.pow(Math.abs(Math.sin(x * 3.0 + y * 2.8 + z * 3.2 + seed)), 3.0) * random(-0.03, 0.01);
-    
-    // Factor de deformación combinado (muy suave, sin picos)
-    const deformation = 1 + noise1 + noise2 + noise3 + lowFreqNoise + craterNoise;
-    
-    // Aplicar deformación manteniendo la dirección original
     positions.setXYZ(
       i,
       (x / length) * deformation,

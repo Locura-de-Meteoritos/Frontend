@@ -2,11 +2,12 @@ import * as THREE from 'three'
 import React, { useEffect, useRef, useMemo } from 'react'
 
 // ============================================================================
-// GENERADOR DE GEOMETRÍA 3D PARA CRÁTERES
+// GENERADOR DE GEOMETRÍA 3D PARA CRÁTERES (OPTIMIZADO)
 // Crea cráteres con depresión central, borde elevado y eyecta
 // ============================================================================
 function createCraterGeometry(radius, seed = Math.random()) {
-  const segments = 64; // Resolución del cráter
+  // OPTIMIZACIÓN: Reducir segmentos de 64 a 32 (reduce 75% de polígonos)
+  const segments = 32; // Era 64, ahora 32 = más rápido
   const geometry = new THREE.PlaneGeometry(radius * 2.5, radius * 2.5, segments, segments);
   const positions = geometry.attributes.position;
   
@@ -46,13 +47,11 @@ function createCraterGeometry(radius, seed = Math.random()) {
     } else if (distFromCenter < 1.2) {
       // Eyecta exterior: gradualmente hacia nivel 0
       const ejectaFactor = (distFromCenter - 0.9) / 0.3;
-      const rimHeight = radius * 0.08;
-      z = rimHeight * (1 - ejectaFactor * ejectaFactor);
     }
     
-    // Añadir rugosidad/irregularidad más sutil
-    const noise = Math.sin(x * 15 + seed) * Math.cos(y * 15 + seed * 1.3) * radius * 0.008;
-    z += noise * random(0.3, 1.2);
+    // OPTIMIZACIÓN: Simplificar cálculo de ruido (menos operaciones matemáticas)
+    const noise = Math.sin(x * 10 + seed) * Math.cos(y * 10 + seed) * radius * 0.006;
+    z += noise * random(0.5, 1.0);
     
     positions.setZ(i, z);
   }
@@ -142,33 +141,32 @@ export default function Crater({ localPosition, position, radius, depth=0.05, pl
 
   return (
     <group position={localSurfacePos} rotation={euler}>
-      {/* Cráter 3D con geometría procedural */}
-      {/* renderOrder bajo para que se dibuje ANTES de la atmósfera */}
+      {/* Cráter 3D con geometría procedural (OPTIMIZADO) */}
       <mesh 
         ref={meshRef}
         renderOrder={10} 
         position={[0, 0, 0]} 
         frustumCulled={false}
-        castShadow
-        receiveShadow
+        castShadow={false} // Desactivar sombras para mejor rendimiento
+        receiveShadow={false}
       >
         <primitive object={craterGeometry} attach="geometry" />
         <meshStandardMaterial
           color="#5a4a3a"
           roughness={0.98}
           metalness={0.02}
-          side={THREE.DoubleSide}
-          flatShading={false}
+          side={THREE.FrontSide} // Solo FrontSide = más rápido
+          flatShading={true} // FlatShading = menos cálculos
           depthTest={true}
           depthWrite={true}
         />
       </mesh>
       
-      {/* Borde oscuro del cráter para mejor definición */}
+      {/* Borde oscuro del cráter (OPTIMIZADO) */}
       <mesh renderOrder={9} position={[0, 0, -0.001]}>
-        <ringGeometry args={[adjustedRadius * 0.75, adjustedRadius * 0.85, 64]} />
+        <ringGeometry args={[adjustedRadius * 0.75, adjustedRadius * 0.85, 32]} /> {/* Reducido de 64 a 32 segmentos */}
         <meshBasicMaterial 
-          side={THREE.DoubleSide} 
+          side={THREE.FrontSide} 
           color="#3a2f25" 
           opacity={0.7} 
           transparent 
@@ -176,11 +174,11 @@ export default function Crater({ localPosition, position, radius, depth=0.05, pl
         />
       </mesh>
       
-      {/* Halo de eyecta (material expulsado) */}
+      {/* Halo de eyecta (OPTIMIZADO) */}
       <mesh renderOrder={8} position={[0, 0, -0.002]}>
-        <ringGeometry args={[adjustedRadius * 0.9, adjustedRadius * 1.4, 48]} />
+        <ringGeometry args={[adjustedRadius * 0.9, adjustedRadius * 1.4, 24]} /> {/* Reducido de 48 a 24 segmentos */}
         <meshBasicMaterial 
-          side={THREE.DoubleSide} 
+          side={THREE.FrontSide}
           color="#7a6a55" 
           opacity={0.3} 
           transparent 
